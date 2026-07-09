@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Field Log — Subject Matter Expert Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1c1c1a;
+  --charcoal: #12181b;
+  --charcoal-2: #1a2226;
+  --paper: #e8e3d3;
+  --paper-2: #f1ede1;
+  --green: #3f6c51;
+  --green-dark: #2b4d39;
+  --brass: #b8862f;
+  --rule: rgba(28, 28, 26, 0.14);
+  --rule-dark: rgba(232, 227, 211, 0.14);
+
+  --display: "Source Serif 4", Georgia, serif;
+  --body: "IBM Plex Sans", -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--charcoal);
+  color: var(--paper);
+  font-family: var(--body);
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  padding-left: 28px;
+}
+
+@media (max-width: 640px) {
+  body { padding-left: 16px; }
+}
+
+/* signature element: a bound "spine" running down the left edge of the page,
+   like the stitched binding of a field notebook */
+.log-spine {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: 28px;
+  background: linear-gradient(180deg, var(--green-dark), var(--green) 50%, var(--green-dark));
+  background-size: 100% 100%;
+  z-index: 5;
+}
+.log-spine::before {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: 13px;
+  width: 1px;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(0,0,0,0.35) 0px,
+    rgba(0,0,0,0.35) 2px,
+    transparent 2px,
+    transparent 18px
+  );
+}
+@media (max-width: 640px) {
+  .log-spine { width: 16px; }
+  .log-spine::before { left: 7px; }
+}
+
+.log-header {
+  border-bottom: 1px solid var(--rule-dark);
+  padding: 28px 40px 22px;
+}
+.header-inner {
+  max-width: 980px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+.brand { display: flex; align-items: baseline; gap: 14px; }
+.brand-mark {
+  font-family: var(--display);
+  font-size: 2.1rem;
+  color: var(--brass);
+  line-height: 1;
+}
+.brand h1 {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.9rem;
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+.brand-sub {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: rgba(232,227,211,0.55);
+  font-style: italic;
+  font-family: var(--display);
+}
+
+.ghost-btn {
+  background: transparent;
+  border: 1px solid var(--rule-dark);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  padding: 9px 14px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  white-space: nowrap;
+}
+.ghost-btn:hover { border-color: var(--brass); background: rgba(184,134,47,0.08); }
+
+.log-main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 48px 40px 100px;
+}
+@media (max-width: 640px) {
+  .log-header { padding: 22px 20px 18px; }
+  .log-main { padding: 32px 18px 80px; }
+}
+
+.call-number {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: var(--brass);
+  margin: 0 0 10px;
+  text-transform: uppercase;
+}
+
+/* ---- Intake ---- */
+.intake { max-width: 640px; }
+.intake-title {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 2.1rem;
+  line-height: 1.25;
+  margin: 0 0 28px;
+}
+.intake-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+#topicInput {
+  background: var(--paper);
+  color: var(--ink);
+  border: none;
+  border-radius: 2px;
+  padding: 16px 18px;
+  font-family: var(--body);
+  font-size: 1rem;
+  border-left: 4px solid var(--brass);
+}
+#topicInput:focus { outline: 2px solid var(--green); outline-offset: 2px; }
+.intake-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.btn-primary, .btn-secondary {
+  font-family: var(--body);
+  font-weight: 500;
+  font-size: 0.92rem;
+  padding: 13px 22px;
+  border-radius: 2px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.1s ease, filter 0.15s ease;
+}
+.btn-primary { background: var(--green); color: var(--paper-2); }
+.btn-primary:hover { filter: brightness(1.12); }
+.btn-secondary { background: transparent; color: var(--paper); border: 1px solid var(--rule-dark); }
+.btn-secondary:hover { border-color: var(--brass); color: var(--brass); }
+.btn-primary:active, .btn-secondary:active { transform: scale(0.98); }
+
+.intake-hint {
+  font-size: 0.8rem;
+  color: rgba(232,227,211,0.45);
+  margin-top: 4px;
+}
+
+/* ---- Dossier ---- */
+.dossier { margin-top: 8px; }
+.dossier-head { margin-bottom: 30px; }
+#dossierTitle {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 2.4rem;
+  margin: 0 0 12px;
+  text-transform: capitalize;
+}
+.dossier-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+.tag {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border: 1px solid var(--rule-dark);
+  border-radius: 20px;
+  color: rgba(232,227,211,0.7);
+}
+
+.dossier-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.panel-wide { grid-column: 1 / -1; }
+@media (max-width: 760px) {
+  .dossier-grid { grid-template-columns: 1fr; }
+}
+
+.panel {
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 3px;
+  padding: 26px 28px;
+}
+.panel h3 {
+  font-family: var(--display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.panel-index {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--brass);
+  border: 1px solid var(--brass);
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+.panel-body { font-size: 0.94rem; line-height: 1.65; }
+.panel-body p { margin: 0 0 10px; }
+.panel-source {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: rgba(28,28,26,0.5);
+  margin: 14px 0 0;
+}
+.loading { color: rgba(28,28,26,0.5); font-style: italic; }
+.error-text { color: #8a3b2f; }
+
+.path-list {
+  margin: 0; padding: 0 0 0 20px;
+  font-size: 0.9rem; line-height: 1.55;
+}
+.path-list li { margin-bottom: 14px; }
+.path-list li:last-child { margin-bottom: 0; }
+.path-list strong { display: block; font-family: var(--display); font-size: 0.98rem; margin-bottom: 2px; }
+.path-list span { color: rgba(28,28,26,0.75); }
+
+.paper-card {
+  border-top: 1px solid var(--rule);
+  padding: 16px 0;
+}
+.paper-card:first-child { border-top: none; padding-top: 4px; }
+.paper-title { font-family: var(--display); font-weight: 600; font-size: 1rem; margin: 0 0 6px; }
+.paper-title a { color: var(--green-dark); text-decoration: none; border-bottom: 1px solid var(--green-dark); }
+.paper-title a:hover { color: var(--brass); border-color: var(--brass); }
+.paper-meta { font-family: var(--mono); font-size: 0.72rem; color: rgba(28,28,26,0.55); margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.03em; }
+.paper-abstract { font-size: 0.86rem; color: rgba(28,28,26,0.8); margin: 0; }
+
+.dossier-footer {
+  display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap;
+}
+
+/* ---- Drawer ---- */
+.drawer {
+  position: fixed; top: 0; right: -380px; bottom: 0; width: 360px;
+  background: var(--charcoal-2);
+  border-left: 1px solid var(--rule-dark);
+  padding: 30px 26px;
+  transition: right 0.25s ease;
+  z-index: 20;
+  overflow-y: auto;
+}
+.drawer.open { right: 0; }
+.drawer-head { display: flex; justify-content: space-between; align-items: center; }
+.drawer-head h3 { font-family: var(--display); margin: 0; font-size: 1.3rem; }
+.drawer-sub { font-size: 0.8rem; color: rgba(232,227,211,0.5); margin: 6px 0 20px; }
+.drawer-list { list-style: none; margin: 0; padding: 0; }
+.drawer-item {
+  padding: 12px 0; border-top: 1px solid var(--rule-dark);
+  cursor: pointer; display: flex; justify-content: space-between; gap: 10px; align-items: baseline;
+}
+.drawer-item:hover .drawer-item-title { color: var(--brass); }
+.drawer-item-title { font-family: var(--display); font-size: 0.95rem; text-transform: capitalize; }
+.drawer-item-date { font-family: var(--mono); font-size: 0.68rem; color: rgba(232,227,211,0.4); white-space: nowrap; }
+.drawer-empty { color: rgba(232,227,211,0.4); font-size: 0.85rem; font-style: italic; }
+
+.drawer-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 15;
+}
+
+[hidden] { display: none !important; }
+
+</style>
+</head>
+<body>
+
+<div class="log-spine"></div>
+
+<header class="log-header">
+  <div class="header-inner">
+    <div class="brand">
+      <span class="brand-mark">§</span>
+      <div>
+        <h1>Field Log</h1>
+        <p class="brand-sub">a working notebook for going deep on anything</p>
+      </div>
+    </div>
+    <button id="historyToggle" class="ghost-btn">Catalogue <span id="historyCount">(0)</span></button>
+  </div>
+</header>
+
+<main class="log-main">
+
+  <section class="intake" id="intake">
+    <p class="call-number" id="callNumber">CALL NO. — / —</p>
+    <h2 class="intake-title">What are you going to learn today?</h2>
+
+    <form id="topicForm" class="intake-form">
+      <input type="text" id="topicInput" placeholder="e.g. maritime law, CRISPR, behavioral economics, thermodynamics..." autocomplete="off">
+      <div class="intake-actions">
+        <button type="submit" class="btn-primary">Open the file</button>
+        <button type="button" id="randomBtn" class="btn-secondary">Surprise me</button>
+      </div>
+    </form>
+    <p class="intake-hint">Random pulls from a shelf of 180 topics across law, economics, physics, biology, philosophy, engineering, and more.</p>
+  </section>
+
+  <section class="dossier" id="dossier" hidden>
+
+    <div class="dossier-head">
+      <p class="call-number" id="dossierCallNumber">CALL NO. — / —</p>
+      <h2 id="dossierTitle">—</h2>
+      <div class="dossier-tags" id="dossierTags"></div>
+    </div>
+
+    <div class="dossier-grid">
+
+      <article class="panel panel-primer">
+        <h3><span class="panel-index">01</span> The Primer</h3>
+        <div id="primerBody" class="panel-body">
+          <p class="loading">Pulling the overview…</p>
+        </div>
+        <p class="panel-source" id="primerSource"></p>
+      </article>
+
+      <article class="panel panel-path">
+        <h3><span class="panel-index">02</span> The Path to Depth</h3>
+        <ol class="path-list">
+          <li>
+            <strong>Map the terrain.</strong>
+            <span>Skim 3–5 foundational sources on <em class="topic-fill">this topic</em>. Don't study yet — just build an index of what exists.</span>
+          </li>
+          <li>
+            <strong>Find the 20% that repeats.</strong>
+            <span>Every niche has recurring problems. Watch the primer and papers below for the same 2–3 tensions showing up again and again.</span>
+          </li>
+          <li>
+            <strong>Read the primary sources, not summaries.</strong>
+            <span>Use the papers panel. Pick one paper you actually understand end to end before moving to the next.</span>
+          </li>
+          <li>
+            <strong>Find who's active now.</strong>
+            <span>Not just canonical authors — who's publishing in the last 2 years. Follow their citation trail.</span>
+          </li>
+          <li>
+            <strong>Write one page in your own words.</strong>
+            <span>Explaining <em class="topic-fill">this topic</em> to someone else is the fastest way to expose what you don't actually understand.</span>
+          </li>
+        </ol>
+      </article>
+
+      <article class="panel panel-papers panel-wide">
+        <h3><span class="panel-index">03</span> Primary Sources</h3>
+        <div id="papersBody" class="panel-body">
+          <p class="loading">Searching arXiv and Semantic Scholar…</p>
+        </div>
+      </article>
+
+    </div>
+
+    <div class="dossier-footer">
+      <button id="markReadBtn" class="btn-primary">Catalogue this session</button>
+      <button id="newTopicBtn" class="btn-secondary">Close file, start another</button>
+    </div>
+
+  </section>
+
+</main>
+
+<aside class="drawer" id="historyDrawer">
+  <div class="drawer-head">
+    <h3>The Catalogue</h3>
+    <button id="closeDrawer" class="ghost-btn">Close</button>
+  </div>
+  <p class="drawer-sub">Every topic you've opened a file on.</p>
+  <ul id="historyList" class="drawer-list"></ul>
+</aside>
+<div class="drawer-overlay" id="drawerOverlay" hidden></div>
+
+<script>
+// A shelf of topics spanning many disciplines, for the "Surprise me" picker.
+// Each entry: { topic, field }
+const TOPIC_SHELF = [
+  // Law
+  { topic: "maritime law", field: "law" },
+  { topic: "antitrust law", field: "law" },
+  { topic: "international arbitration", field: "law" },
+  { topic: "constitutional originalism", field: "law" },
+  { topic: "intellectual property law", field: "law" },
+  { topic: "space law", field: "law" },
+  { topic: "administrative law", field: "law" },
+  { topic: "conflict of laws", field: "law" },
+  { topic: "data protection law", field: "law" },
+  { topic: "criminal sentencing theory", field: "law" },
+
+  // Economics
+  { topic: "behavioral economics", field: "economics" },
+  { topic: "monetary policy", field: "economics" },
+  { topic: "game theory", field: "economics" },
+  { topic: "development economics", field: "economics" },
+  { topic: "mechanism design", field: "economics" },
+  { topic: "labor economics", field: "economics" },
+  { topic: "auction theory", field: "economics" },
+  { topic: "public choice theory", field: "economics" },
+  { topic: "trade economics", field: "economics" },
+  { topic: "financial market microstructure", field: "economics" },
+
+  // Physics
+  { topic: "quantum entanglement", field: "physics" },
+  { topic: "thermodynamics", field: "physics" },
+  { topic: "condensed matter physics", field: "physics" },
+  { topic: "general relativity", field: "physics" },
+  { topic: "plasma physics", field: "physics" },
+  { topic: "particle physics", field: "physics" },
+  { topic: "fluid dynamics", field: "physics" },
+  { topic: "quantum computing", field: "physics" },
+  { topic: "astrophysics of black holes", field: "physics" },
+  { topic: "statistical mechanics", field: "physics" },
+
+  // Biology
+  { topic: "CRISPR gene editing", field: "biology" },
+  { topic: "synthetic biology", field: "biology" },
+  { topic: "evolutionary developmental biology", field: "biology" },
+  { topic: "microbiome science", field: "biology" },
+  { topic: "epigenetics", field: "biology" },
+  { topic: "neurobiology of sleep", field: "biology" },
+  { topic: "cancer immunotherapy", field: "biology" },
+  { topic: "protein folding", field: "biology" },
+  { topic: "conservation genetics", field: "biology" },
+  { topic: "virology", field: "biology" },
+
+  // Philosophy
+  { topic: "philosophy of mind", field: "philosophy" },
+  { topic: "epistemology", field: "philosophy" },
+  { topic: "moral relativism", field: "philosophy" },
+  { topic: "philosophy of science", field: "philosophy" },
+  { topic: "existentialism", field: "philosophy" },
+  { topic: "philosophy of language", field: "philosophy" },
+  { topic: "ethics of artificial intelligence", field: "philosophy" },
+  { topic: "free will and determinism", field: "philosophy" },
+  { topic: "political philosophy of justice", field: "philosophy" },
+  { topic: "phenomenology", field: "philosophy" },
+
+  // Engineering
+  { topic: "digital twin technology", field: "engineering" },
+  { topic: "control systems theory", field: "engineering" },
+  { topic: "additive manufacturing", field: "engineering" },
+  { topic: "structural fatigue analysis", field: "engineering" },
+  { topic: "robotics kinematics", field: "engineering" },
+  { topic: "battery electrochemistry", field: "engineering" },
+  { topic: "computational fluid dynamics", field: "engineering" },
+  { topic: "systems engineering", field: "engineering" },
+  { topic: "industrial automation", field: "engineering" },
+  { topic: "materials science of composites", field: "engineering" },
+
+  // Computer Science
+  { topic: "distributed systems", field: "computer science" },
+  { topic: "cryptography", field: "computer science" },
+  { topic: "large language models", field: "computer science" },
+  { topic: "computer vision", field: "computer science" },
+  { topic: "compiler design", field: "computer science" },
+  { topic: "database internals", field: "computer science" },
+  { topic: "reinforcement learning", field: "computer science" },
+  { topic: "computational complexity theory", field: "computer science" },
+  { topic: "network security", field: "computer science" },
+  { topic: "formal verification", field: "computer science" },
+
+  // History
+  { topic: "the Byzantine Empire", field: "history" },
+  { topic: "the Mongol conquests", field: "history" },
+  { topic: "the Cold War", field: "history" },
+  { topic: "the Industrial Revolution", field: "history" },
+  { topic: "the Silk Road", field: "history" },
+  { topic: "the fall of the Roman Republic", field: "history" },
+  { topic: "the Indian independence movement", field: "history" },
+  { topic: "the history of navigation", field: "history" },
+  { topic: "the Ottoman Empire", field: "history" },
+  { topic: "the history of cartography", field: "history" },
+
+  // Psychology
+  { topic: "cognitive biases", field: "psychology" },
+  { topic: "attachment theory", field: "psychology" },
+  { topic: "the psychology of habit formation", field: "psychology" },
+  { topic: "personality psychology", field: "psychology" },
+  { topic: "decision fatigue", field: "psychology" },
+  { topic: "the psychology of motivation", field: "psychology" },
+  { topic: "cognitive load theory", field: "psychology" },
+  { topic: "the psychology of persuasion", field: "psychology" },
+  { topic: "developmental psychology", field: "psychology" },
+  { topic: "the psychology of flow states", field: "psychology" },
+
+  // Linguistics
+  { topic: "historical linguistics", field: "linguistics" },
+  { topic: "computational linguistics", field: "linguistics" },
+  { topic: "language acquisition", field: "linguistics" },
+  { topic: "sociolinguistics", field: "linguistics" },
+  { topic: "phonetics and phonology", field: "linguistics" },
+  { topic: "semantics and pragmatics", field: "linguistics" },
+  { topic: "language death and revitalization", field: "linguistics" },
+  { topic: "syntax theory", field: "linguistics" },
+
+  // Medicine
+  { topic: "immunology", field: "medicine" },
+  { topic: "epidemiology", field: "medicine" },
+  { topic: "pharmacokinetics", field: "medicine" },
+  { topic: "neurodegenerative disease", field: "medicine" },
+  { topic: "regenerative medicine", field: "medicine" },
+  { topic: "medical imaging", field: "medicine" },
+  { topic: "endocrinology", field: "medicine" },
+  { topic: "public health policy", field: "medicine" },
+
+  // Chemistry
+  { topic: "catalysis", field: "chemistry" },
+  { topic: "organic synthesis", field: "chemistry" },
+  { topic: "electrochemistry", field: "chemistry" },
+  { topic: "polymer chemistry", field: "chemistry" },
+  { topic: "photochemistry", field: "chemistry" },
+  { topic: "green chemistry", field: "chemistry" },
+
+  // Mathematics
+  { topic: "number theory", field: "mathematics" },
+  { topic: "topology", field: "mathematics" },
+  { topic: "graph theory", field: "mathematics" },
+  { topic: "probability theory", field: "mathematics" },
+  { topic: "differential geometry", field: "mathematics" },
+  { topic: "chaos theory", field: "mathematics" },
+  { topic: "optimization theory", field: "mathematics" },
+
+  // Political Science
+  { topic: "geopolitics of energy", field: "political science" },
+  { topic: "electoral systems design", field: "political science" },
+  { topic: "international relations realism", field: "political science" },
+  { topic: "authoritarian regime survival", field: "political science" },
+  { topic: "nuclear deterrence theory", field: "political science" },
+  { topic: "the politics of trade sanctions", field: "political science" },
+
+  // Art & Design
+  { topic: "the history of typography", field: "art and design" },
+  { topic: "Bauhaus design principles", field: "art and design" },
+  { topic: "color theory", field: "art and design" },
+  { topic: "architectural structural design", field: "art and design" },
+  { topic: "industrial design history", field: "art and design" },
+
+  // Anthropology / Sociology
+  { topic: "cultural anthropology", field: "anthropology" },
+  { topic: "the sociology of networks", field: "sociology" },
+  { topic: "urban sociology", field: "sociology" },
+  { topic: "kinship systems", field: "anthropology" },
+
+  // Environmental Science / Astronomy
+  { topic: "climate feedback loops", field: "environmental science" },
+  { topic: "ocean acidification", field: "environmental science" },
+  { topic: "exoplanet detection", field: "astronomy" },
+  { topic: "stellar nucleosynthesis", field: "astronomy" },
+  { topic: "biodiversity loss", field: "environmental science" },
+
+  // Neuroscience
+  { topic: "the neuroscience of memory", field: "neuroscience" },
+  { topic: "computational neuroscience", field: "neuroscience" },
+  { topic: "the neuroscience of decision-making", field: "neuroscience" },
+  { topic: "neuroplasticity", field: "neuroscience" },
+];
+
+function pickRandomTopic() {
+  const i = Math.floor(Math.random() * TOPIC_SHELF.length);
+  return TOPIC_SHELF[i];
+}
+
+function fieldForTopic(topicText) {
+  const hit = TOPIC_SHELF.find(
+    (t) => t.topic.toLowerCase() === topicText.trim().toLowerCase()
+  );
+  return hit ? hit.field : "general";
+}
+
+</script>
+<script>
+// ---------- Call number generator (decorative, LOC-flavored) ----------
+const CLASS_MAP = {
+  law: "KF", economics: "HB", physics: "QC", biology: "QH",
+  philosophy: "BD", engineering: "TA", "computer science": "QA76",
+  history: "D", psychology: "BF", linguistics: "P", medicine: "R",
+  chemistry: "QD", mathematics: "QA", "political science": "JZ",
+  "art and design": "NK", anthropology: "GN", sociology: "HM",
+  "environmental science": "GE", astronomy: "QB", neuroscience: "QP",
+  general: "AZ",
+};
+
+function makeCallNumber(field) {
+  const cls = CLASS_MAP[field] || CLASS_MAP.general;
+  const num = Math.floor(100 + Math.random() * 899);
+  const year = 2026;
+  return `CALL NO. ${cls}${num} .F5 ${year}`;
+}
+
+// ---------- State ----------
+let currentTopic = null;
+let currentField = "general";
+
+// ---------- DOM refs ----------
+const intakeSection = document.getElementById("intake");
+const dossierSection = document.getElementById("dossier");
+const topicForm = document.getElementById("topicForm");
+const topicInput = document.getElementById("topicInput");
+const randomBtn = document.getElementById("randomBtn");
+const callNumberEl = document.getElementById("callNumber");
+const dossierCallNumberEl = document.getElementById("dossierCallNumber");
+const dossierTitle = document.getElementById("dossierTitle");
+const dossierTags = document.getElementById("dossierTags");
+const primerBody = document.getElementById("primerBody");
+const primerSource = document.getElementById("primerSource");
+const papersBody = document.getElementById("papersBody");
+const newTopicBtn = document.getElementById("newTopicBtn");
+const markReadBtn = document.getElementById("markReadBtn");
+const historyToggle = document.getElementById("historyToggle");
+const historyCount = document.getElementById("historyCount");
+const historyDrawer = document.getElementById("historyDrawer");
+const closeDrawer = document.getElementById("closeDrawer");
+const drawerOverlay = document.getElementById("drawerOverlay");
+const historyList = document.getElementById("historyList");
+
+// randomize the intake call number on load, just for flavor
+callNumberEl.textContent = makeCallNumber("general");
+
+// ---------- Catalogue (localStorage) ----------
+const STORAGE_KEY = "fieldlog.catalogue";
+
+function getCatalogue() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveToCatalogue(topic, field) {
+  const cat = getCatalogue();
+  const entry = { topic, field, date: new Date().toISOString() };
+  cat.unshift(entry);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(cat.slice(0, 200)));
+  renderCatalogue();
+}
+
+function renderCatalogue() {
+  const cat = getCatalogue();
+  historyCount.textContent = `(${cat.length})`;
+  historyList.innerHTML = "";
+  if (cat.length === 0) {
+    historyList.innerHTML = `<li class="drawer-empty">Nothing catalogued yet. Open a file to begin.</li>`;
+    return;
+  }
+  cat.forEach((entry) => {
+    const li = document.createElement("li");
+    li.className = "drawer-item";
+    const d = new Date(entry.date);
+    const dateStr = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    li.innerHTML = `<span class="drawer-item-title">${escapeHtml(entry.topic)}</span><span class="drawer-item-date">${dateStr}</span>`;
+    li.addEventListener("click", () => {
+      toggleDrawer(false);
+      topicInput.value = entry.topic;
+      openDossier(entry.topic);
+    });
+    historyList.appendChild(li);
+  });
+}
+
+// ---------- Utilities ----------
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function truncate(str, n) {
+  if (!str) return "";
+  return str.length > n ? str.slice(0, n).trim() + "…" : str;
+}
+
+// ---------- Wikipedia primer ----------
+async function fetchPrimer(topic) {
+  try {
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(topic)}&limit=1&namespace=0&format=json&origin=*`;
+    const searchRes = await fetch(searchUrl);
+    const searchData = await searchRes.json();
+    const title = (searchData[1] && searchData[1][0]) || topic;
+
+    const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+    const res = await fetch(summaryUrl);
+    if (!res.ok) throw new Error("no summary");
+    const data = await res.json();
+    return {
+      title: data.title,
+      extract: data.extract,
+      url: data.content_urls && data.content_urls.desktop ? data.content_urls.desktop.page : null,
+    };
+  } catch (err) {
+    return null;
+  }
+}
+
+// ---------- arXiv papers ----------
+async function fetchArxiv(topic) {
+  try {
+    const url = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(topic)}&start=0&max_results=4&sortBy=relevance&sortOrder=descending`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("arxiv error");
+    const text = await res.text();
+    const xml = new DOMParser().parseFromString(text, "application/xml");
+    const entries = Array.from(xml.getElementsByTagName("entry"));
+    return entries.map((e) => {
+      const getTag = (tag) => {
+        const el = e.getElementsByTagName(tag)[0];
+        return el ? el.textContent.trim() : "";
+      };
+      const idLink = getTag("id");
+      const published = getTag("published").slice(0, 4);
+      return {
+        source: "arXiv",
+        title: getTag("title").replace(/\s+/g, " "),
+        abstract: getTag("summary").replace(/\s+/g, " "),
+        url: idLink,
+        year: published,
+      };
+    });
+  } catch (err) {
+    return [];
+  }
+}
+
+// ---------- Semantic Scholar papers ----------
+async function fetchSemanticScholar(topic) {
+  try {
+    const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(topic)}&limit=5&fields=title,abstract,url,year,citationCount,venue`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("s2 error");
+    const data = await res.json();
+    return (data.data || [])
+      .filter((p) => p.title)
+      .map((p) => ({
+        source: "Semantic Scholar",
+        title: p.title,
+        abstract: p.abstract || "",
+        url: p.url,
+        year: p.year || "",
+        venue: p.venue || "",
+        citations: p.citationCount,
+      }));
+  } catch (err) {
+    return [];
+  }
+}
+
+// ---------- Rendering ----------
+function renderPrimer(primer, topic) {
+  if (!primer || !primer.extract) {
+    primerBody.innerHTML = `<p class="error-text">Couldn't pull a clean overview for "${escapeHtml(topic)}" — try a slightly more standard name for it, or open the source links in the papers panel directly.</p>`;
+    primerSource.textContent = "";
+    return;
+  }
+  primerBody.innerHTML = `<p>${escapeHtml(primer.extract)}</p>`;
+  primerSource.innerHTML = primer.url
+    ? `Source: Wikipedia — <a href="${primer.url}" target="_blank" rel="noopener" style="color:inherit;">${escapeHtml(primer.title)}</a>`
+    : "";
+}
+
+function renderPapers(papers, topic) {
+  if (!papers || papers.length === 0) {
+    papersBody.innerHTML = `<p class="error-text">No papers surfaced automatically for "${escapeHtml(topic)}". Try <a href="https://www.google.com/search?q=${encodeURIComponent(topic)}+site:arxiv.org" target="_blank" rel="noopener" style="color:var(--green-dark);">searching arXiv directly</a> or <a href="https://www.semanticscholar.org/search?q=${encodeURIComponent(topic)}" target="_blank" rel="noopener" style="color:var(--green-dark);">Semantic Scholar</a>.</p>`;
+    return;
+  }
+  papersBody.innerHTML = papers
+    .map((p) => {
+      const meta = [p.source, p.year, p.venue, p.citations != null ? `${p.citations} citations` : null]
+        .filter(Boolean)
+        .join(" · ");
+      return `
+        <div class="paper-card">
+          <p class="paper-title"><a href="${p.url || "#"}" target="_blank" rel="noopener">${escapeHtml(p.title)}</a></p>
+          <p class="paper-meta">${escapeHtml(meta)}</p>
+          ${p.abstract ? `<p class="paper-abstract">${escapeHtml(truncate(p.abstract, 260))}</p>` : ""}
+        </div>`;
+    })
+    .join("");
+}
+
+function updatePathFillers(topic) {
+  document.querySelectorAll(".topic-fill").forEach((el) => {
+    el.textContent = topic;
+  });
+}
+
+// ---------- Main open-dossier flow ----------
+async function openDossier(topic) {
+  currentTopic = topic.trim();
+  currentField = fieldForTopic(currentTopic);
+
+  intakeSection.hidden = true;
+  dossierSection.hidden = false;
+
+  dossierTitle.textContent = currentTopic;
+  dossierCallNumberEl.textContent = makeCallNumber(currentField);
+  dossierTags.innerHTML = `<span class="tag">${escapeHtml(currentField)}</span>`;
+  updatePathFillers(currentTopic);
+
+  primerBody.innerHTML = `<p class="loading">Pulling the overview…</p>`;
+  primerSource.textContent = "";
+  papersBody.innerHTML = `<p class="loading">Searching arXiv and Semantic Scholar…</p>`;
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+
+  const [primer, arxivPapers, s2Papers] = await Promise.all([
+    fetchPrimer(currentTopic),
+    fetchArxiv(currentTopic),
+    fetchSemanticScholar(currentTopic),
+  ]);
+
+  renderPrimer(primer, currentTopic);
+
+  // merge, dedupe loosely by lowercased title, arXiv first
+  const seen = new Set();
+  const merged = [...arxivPapers, ...s2Papers].filter((p) => {
+    const key = p.title.toLowerCase().slice(0, 60);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  renderPapers(merged.slice(0, 7), currentTopic);
+}
+
+// ---------- Drawer ----------
+function toggleDrawer(open) {
+  historyDrawer.classList.toggle("open", open);
+  drawerOverlay.hidden = !open;
+}
+
+// ---------- Event wiring ----------
+topicForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const val = topicInput.value.trim();
+  if (!val) return;
+  openDossier(val);
+});
+
+randomBtn.addEventListener("click", () => {
+  const pick = pickRandomTopic();
+  topicInput.value = pick.topic;
+  openDossier(pick.topic);
+});
+
+newTopicBtn.addEventListener("click", () => {
+  dossierSection.hidden = true;
+  intakeSection.hidden = false;
+  topicInput.value = "";
+  callNumberEl.textContent = makeCallNumber("general");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
+markReadBtn.addEventListener("click", () => {
+  if (!currentTopic) return;
+  saveToCatalogue(currentTopic, currentField);
+  markReadBtn.textContent = "Catalogued ✓";
+  setTimeout(() => (markReadBtn.textContent = "Catalogue this session"), 1600);
+});
+
+historyToggle.addEventListener("click", () => toggleDrawer(true));
+closeDrawer.addEventListener("click", () => toggleDrawer(false));
+drawerOverlay.addEventListener("click", () => toggleDrawer(false));
+
+// ---------- Init ----------
+renderCatalogue();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Field Log — Subject Matter Expert Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="log-spine"></div>
+
+<header class="log-header">
+  <div class="header-inner">
+    <div class="brand">
+      <span class="brand-mark">§</span>
+      <div>
+        <h1>Field Log</h1>
+        <p class="brand-sub">a working notebook for going deep on anything</p>
+      </div>
+    </div>
+    <button id="historyToggle" class="ghost-btn">Catalogue <span id="historyCount">(0)</span></button>
+  </div>
+</header>
+
+<main class="log-main">
+
+  <section class="intake" id="intake">
+    <p class="call-number" id="callNumber">CALL NO. — / —</p>
+    <h2 class="intake-title">What are you going to learn today?</h2>
+
+    <form id="topicForm" class="intake-form">
+      <input type="text" id="topicInput" placeholder="e.g. maritime law, CRISPR, behavioral economics, thermodynamics..." autocomplete="off">
+      <div class="intake-actions">
+        <button type="submit" class="btn-primary">Open the file</button>
+        <button type="button" id="randomBtn" class="btn-secondary">Surprise me</button>
+      </div>
+    </form>
+    <p class="intake-hint">Random pulls from a shelf of 180 topics across law, economics, physics, biology, philosophy, engineering, and more.</p>
+  </section>
+
+  <section class="dossier" id="dossier" hidden>
+
+    <div class="dossier-head">
+      <p class="call-number" id="dossierCallNumber">CALL NO. — / —</p>
+      <h2 id="dossierTitle">—</h2>
+      <div class="dossier-tags" id="dossierTags"></div>
+    </div>
+
+    <div class="dossier-grid">
+
+      <article class="panel panel-primer">
+        <h3><span class="panel-index">01</span> The Primer</h3>
+        <div id="primerBody" class="panel-body">
+          <p class="loading">Pulling the overview…</p>
+        </div>
+        <p class="panel-source" id="primerSource"></p>
+      </article>
+
+      <article class="panel panel-path">
+        <h3><span class="panel-index">02</span> The Path to Depth</h3>
+        <ol class="path-list">
+          <li>
+            <strong>Map the terrain.</strong>
+            <span>Skim 3–5 foundational sources on <em class="topic-fill">this topic</em>. Don't study yet — just build an index of what exists.</span>
+          </li>
+          <li>
+            <strong>Find the 20% that repeats.</strong>
+            <span>Every niche has recurring problems. Watch the primer and papers below for the same 2–3 tensions showing up again and again.</span>
+          </li>
+          <li>
+            <strong>Read the primary sources, not summaries.</strong>
+            <span>Use the papers panel. Pick one paper you actually understand end to end before moving to the next.</span>
+          </li>
+          <li>
+            <strong>Find who's active now.</strong>
+            <span>Not just canonical authors — who's publishing in the last 2 years. Follow their citation trail.</span>
+          </li>
+          <li>
+            <strong>Write one page in your own words.</strong>
+            <span>Explaining <em class="topic-fill">this topic</em> to someone else is the fastest way to expose what you don't actually understand.</span>
+          </li>
+        </ol>
+      </article>
+
+      <article class="panel panel-papers panel-wide">
+        <h3><span class="panel-index">03</span> Primary Sources</h3>
+        <div id="papersBody" class="panel-body">
+          <p class="loading">Searching arXiv and Semantic Scholar…</p>
+        </div>
+      </article>
+
+    </div>
+
+    <div class="dossier-footer">
+      <button id="markReadBtn" class="btn-primary">Catalogue this session</button>
+      <button id="newTopicBtn" class="btn-secondary">Close file, start another</button>
+    </div>
+
+  </section>
+
+</main>
+
+<aside class="drawer" id="historyDrawer">
+  <div class="drawer-head">
+    <h3>The Catalogue</h3>
+    <button id="closeDrawer" class="ghost-btn">Close</button>
+  </div>
+  <p class="drawer-sub">Every topic you've opened a file on.</p>
+  <ul id="historyList" class="drawer-list"></ul>
+</aside>
+<div class="drawer-overlay" id="drawerOverlay" hidden></div>
+
+<script src="js/topics.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
