@@ -135,6 +135,47 @@ a { color: var(--indigo); }
 }
 .link-btn:hover { color: var(--indigo); }
 
+/* ---------- Search suggestions ---------- */
+.suggestion-list {
+  text-align: left;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  margin-top: -4px; overflow: hidden;
+  box-shadow: 0 8px 20px rgba(20,22,31,0.08);
+}
+.suggestion-item {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; background: none; border: none; border-top: 1px solid var(--border);
+  padding: 11px 16px; font-family: var(--display); font-size: 0.88rem; color: var(--ink);
+  cursor: pointer; text-align: left;
+}
+.suggestion-item:first-child { border-top: none; }
+.suggestion-item:hover { background: var(--bg); color: var(--indigo); }
+.suggestion-field {
+  font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase;
+  color: var(--ink-muted); letter-spacing: 0.04em;
+}
+
+/* ---------- Surprise-me popover ---------- */
+.surprise-wrap { position: relative; display: inline-block; }
+.surprise-popover {
+  position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  margin-top: 10px; width: 320px; max-width: 80vw;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 16px; box-shadow: 0 12px 28px rgba(20,22,31,0.12); z-index: 25;
+  text-align: left;
+}
+.surprise-popover-label {
+  font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--ink-muted); margin: 0 0 10px;
+}
+.surprise-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.surprise-chip {
+  background: var(--indigo-soft); color: var(--indigo-dark); border: none;
+  font-family: var(--display); font-weight: 600; font-size: 0.78rem;
+  padding: 7px 12px; border-radius: 999px; cursor: pointer;
+}
+.surprise-chip:hover { background: #dcdafb; }
+
 /* ---------- Dossier ---------- */
 .dossier { padding-top: 36px; }
 .dossier-head {
@@ -259,6 +300,29 @@ a { color: var(--indigo); }
 
 .scrim { position: fixed; inset: 0; background: rgba(20,22,31,0.35); z-index: 40; }
 
+/* ---------- Mind Map overlay ---------- */
+.map-overlay {
+  position: fixed; inset: 0; background: var(--surface); z-index: 70;
+  display: flex; flex-direction: column;
+}
+.map-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 20px 28px; border-bottom: 1px solid var(--border); gap: 16px; flex-wrap: wrap;
+}
+.map-head h3 { font-size: 1.2rem; font-weight: 800; margin: 0; }
+.map-head-actions { display: flex; align-items: center; gap: 10px; }
+.map-canvas-wrap { flex: 1; position: relative; }
+#mapSvg { width: 100%; height: 100%; display: block; }
+.map-empty {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  color: var(--ink-muted); font-size: 0.95rem; text-align: center;
+}
+.map-node text { user-select: none; }
+
+@media (max-width: 640px) {
+  .map-head { padding: 16px; }
+}
+
 [hidden] { display: none !important; }
 
 </style>
@@ -272,6 +336,7 @@ a { color: var(--indigo); }
       <span class="brand-name">nodeway</span>
     </div>
     <div class="topbar-actions">
+      <button id="mapToggle" class="pill-btn">Mind Map</button>
       <button id="pathToggle" class="pill-btn">The Path</button>
       <button id="historyToggle" class="pill-btn">Catalogue <span id="historyCount">0</span></button>
       <button id="settingsToggle" class="icon-btn" title="Settings" aria-label="Settings">
@@ -305,7 +370,15 @@ a { color: var(--indigo); }
       <input type="text" id="topicInput" placeholder="maritime law, CRISPR, behavioral economics, thermodynamics…" autocomplete="off">
       <button type="submit" class="btn-primary">Build the map</button>
     </form>
-    <button type="button" id="randomBtn" class="link-btn">or let me pick — surprise me</button>
+    <div id="suggestionList" class="suggestion-list" hidden></div>
+
+    <div class="surprise-wrap" id="surpriseWrap">
+      <button type="button" id="randomBtn" class="link-btn">or let me pick — surprise me</button>
+      <div class="surprise-popover" id="surprisePopover" hidden>
+        <p class="surprise-popover-label">Pick one, or click "surprise me" for fully random</p>
+        <div class="surprise-chips" id="surpriseChips"></div>
+      </div>
+    </div>
   </section>
 
   <section class="dossier" id="dossier" hidden>
@@ -393,21 +466,50 @@ a { color: var(--indigo); }
       <h3>Settings</h3>
       <button id="closeSettings" class="icon-btn" aria-label="Close">✕</button>
     </div>
-    <label class="modal-label" for="apiKeyInput">Anthropic API key (optional)</label>
-    <input type="password" id="apiKeyInput" class="modal-input" placeholder="sk-ant-…">
-    <p class="modal-hint">
+    <label class="modal-label" for="providerSelect">AI provider (optional)</label>
+    <select id="providerSelect" class="modal-input">
+      <option value="none">None — use Wikipedia extract only</option>
+      <option value="anthropic">Anthropic (Claude)</option>
+      <option value="gemini">Google AI Studio (Gemini) — free tier</option>
+    </select>
+
+    <label class="modal-label" for="apiKeyInput">API key</label>
+    <input type="password" id="apiKeyInput" class="modal-input" placeholder="paste your key here">
+
+    <label class="modal-label" for="modelInput">Model</label>
+    <input type="text" id="modelInput" class="modal-input" placeholder="model name">
+
+    <p class="modal-hint" id="providerHint">
       Stored only in this browser's local storage — never sent anywhere except directly to
-      Anthropic's API when generating a summary. Without a key, summaries fall back to the
-      first paragraph of the relevant Wikipedia article. Get a key at
-      <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>.
+      the provider's API when generating a summary. Without a key, summaries fall back to the
+      first paragraph of the relevant Wikipedia article.
     </p>
-    <button id="saveApiKey" class="btn-primary">Save key</button>
+    <button id="saveApiKey" class="btn-primary">Save</button>
     <button id="clearApiKey" class="btn-ghost">Clear key</button>
   </div>
 </div>
 
 <div class="scrim" id="scrim" hidden></div>
 
+<!-- Mind Map overlay -->
+<div class="map-overlay" id="mapOverlay" hidden>
+  <div class="map-head">
+    <div>
+      <h3>Mind Map</h3>
+      <p class="drawer-sub">Teal = topics you've opened. Indigo = suggested, not explored yet. Click any node.</p>
+    </div>
+    <div class="map-head-actions">
+      <button id="clearMapBtn" class="btn-ghost">Clear map</button>
+      <button id="closeMapBtn" class="icon-btn" aria-label="Close">✕</button>
+    </div>
+  </div>
+  <div class="map-canvas-wrap">
+    <svg id="mapSvg"></svg>
+    <p id="mapEmpty" class="map-empty" hidden>Open a topic to start building your map.</p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script>
 // A shelf of topics spanning many disciplines, for the "Surprise me" picker.
 // Each entry: { topic, field }
@@ -616,6 +718,10 @@ const dossierSection = document.getElementById("dossier");
 const topicForm = document.getElementById("topicForm");
 const topicInput = document.getElementById("topicInput");
 const randomBtn = document.getElementById("randomBtn");
+const suggestionList = document.getElementById("suggestionList");
+const surpriseWrap = document.getElementById("surpriseWrap");
+const surprisePopover = document.getElementById("surprisePopover");
+const surpriseChips = document.getElementById("surpriseChips");
 
 const dossierField = document.getElementById("dossierField");
 const dossierTitle = document.getElementById("dossierTitle");
@@ -642,11 +748,21 @@ const historyList = document.getElementById("historyList");
 const settingsToggle = document.getElementById("settingsToggle");
 const settingsOverlay = document.getElementById("settingsOverlay");
 const closeSettings = document.getElementById("closeSettings");
+const providerSelect = document.getElementById("providerSelect");
 const apiKeyInput = document.getElementById("apiKeyInput");
+const modelInput = document.getElementById("modelInput");
+const providerHint = document.getElementById("providerHint");
 const saveApiKey = document.getElementById("saveApiKey");
 const clearApiKey = document.getElementById("clearApiKey");
 
 const scrim = document.getElementById("scrim");
+
+// default model per provider — editable by the user in Settings if these drift
+const PROVIDER_DEFAULTS = {
+  anthropic: { model: "claude-haiku-4-5-20251001", keyHelp: "Get a key at console.anthropic.com. Paid, pay-as-you-go — pennies per summary on Haiku." },
+  gemini: { model: "gemini-2.5-flash", keyHelp: "Get a free key at aistudio.google.com/apikey. Gemini's free tier covers this kind of use easily." },
+  none: { model: "", keyHelp: "" },
+};
 
 // ---------- Utilities ----------
 function escapeHtml(str) {
@@ -659,11 +775,21 @@ function truncate(str, n) {
   return str.length > n ? str.slice(0, n).trim() + "…" : str;
 }
 
-// ---------- API key storage ----------
-const KEY_STORAGE = "fieldlog.anthropicKey";
-function getApiKey() { return localStorage.getItem(KEY_STORAGE) || ""; }
-function setApiKey(key) { localStorage.setItem(KEY_STORAGE, key); }
-function removeApiKey() { localStorage.removeItem(KEY_STORAGE); }
+// ---------- AI provider settings storage ----------
+const SETTINGS_STORAGE = "nodeway.aiSettings";
+function getAiSettings() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SETTINGS_STORAGE));
+    if (raw && raw.provider) return raw;
+  } catch {}
+  return { provider: "none", apiKey: "", model: "" };
+}
+function setAiSettings(settings) {
+  localStorage.setItem(SETTINGS_STORAGE, JSON.stringify(settings));
+}
+function clearAiSettings() {
+  localStorage.removeItem(SETTINGS_STORAGE);
+}
 
 // ---------- Catalogue (localStorage) ----------
 const STORAGE_KEY = "fieldlog.catalogue";
@@ -736,36 +862,66 @@ async function fetchRelatedTopics(wikiTitle) {
   }
 }
 
-// ---------- AI summary (optional, needs user's own Anthropic key) ----------
-async function fetchAiSummary(topic) {
-  const key = getApiKey();
-  if (!key) return null;
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+// ---------- AI summary (optional, needs the user's own API key) ----------
+const AI_PROMPT = (topic) =>
+  `Give a sharp, concrete 2-paragraph primer on "${topic}" for someone starting to go deep on it. First paragraph: what it actually is and why it matters. Second paragraph: the 2-3 central tensions or open questions in the field right now. Plain language, no fluff, no "in conclusion." Do not use markdown headers.`;
+
+async function fetchAiSummaryAnthropic(topic, key, model) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": key,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify({
+      model: model || PROVIDER_DEFAULTS.anthropic.model,
+      max_tokens: 400,
+      messages: [{ role: "user", content: AI_PROMPT(topic) }],
+    }),
+  });
+  if (!res.ok) throw new Error("anthropic api error " + res.status);
+  const data = await res.json();
+  return (data.content || [])
+    .filter((b) => b.type === "text")
+    .map((b) => b.text)
+    .join("\n\n");
+}
+
+async function fetchAiSummaryGemini(topic, key, model) {
+  const m = model || PROVIDER_DEFAULTS.gemini.model;
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`,
+    {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true",
+        "x-goog-api-key": key,
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 400,
-        messages: [
-          {
-            role: "user",
-            content: `Give a sharp, concrete 2-paragraph primer on "${topic}" for someone starting to go deep on it. First paragraph: what it actually is and why it matters. Second paragraph: the 2-3 central tensions or open questions in the field right now. Plain language, no fluff, no "in conclusion." Do not use markdown headers.`,
-          },
-        ],
+        contents: [{ parts: [{ text: AI_PROMPT(topic) }] }],
       }),
-    });
-    if (!res.ok) throw new Error("api error " + res.status);
-    const data = await res.json();
-    const text = (data.content || [])
-      .filter((b) => b.type === "text")
-      .map((b) => b.text)
-      .join("\n\n");
+    }
+  );
+  if (!res.ok) throw new Error("gemini api error " + res.status);
+  const data = await res.json();
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  return parts.map((p) => p.text || "").join("\n\n");
+}
+
+async function fetchAiSummary(topic) {
+  const settings = getAiSettings();
+  if (!settings.provider || settings.provider === "none" || !settings.apiKey) return null;
+  try {
+    let text;
+    if (settings.provider === "anthropic") {
+      text = await fetchAiSummaryAnthropic(topic, settings.apiKey, settings.model);
+    } else if (settings.provider === "gemini") {
+      text = await fetchAiSummaryGemini(topic, settings.apiKey, settings.model);
+    } else {
+      return null;
+    }
     return text || null;
   } catch (err) {
     return null;
@@ -841,8 +997,10 @@ async function fetchSemanticScholar(topic) {
 // ---------- Rendering ----------
 function renderSummary(aiText, wiki, topic) {
   if (aiText) {
+    const settings = getAiSettings();
+    const providerLabel = settings.provider === "gemini" ? "AI · Gemini" : settings.provider === "anthropic" ? "AI · Claude" : "AI";
     summaryHeading.textContent = "AI Summary";
-    summaryBadge.textContent = "AI";
+    summaryBadge.textContent = providerLabel;
     summaryBadge.classList.remove("wiki-badge");
     primerBody.innerHTML = aiText
       .split(/\n{2,}/)
@@ -857,7 +1015,7 @@ function renderSummary(aiText, wiki, topic) {
     primerBody.innerHTML = `<p class="error-text">Couldn't pull an overview for "${escapeHtml(topic)}". Try a more standard name for it.</p>`;
     return;
   }
-  primerBody.innerHTML = `<p>${escapeHtml(wiki.extract)}</p><p class="source-note">Wikipedia extract — add an Anthropic API key in Settings for an AI-generated version instead.</p>`;
+  primerBody.innerHTML = `<p>${escapeHtml(wiki.extract)}</p><p class="source-note">Wikipedia extract — add an API key (Claude or Gemini) in Settings for an AI-generated version instead.</p>`;
 }
 
 function renderImages(wikiThumb, openverseImages, topic) {
@@ -956,6 +1114,12 @@ async function openDossier(topic) {
 
   const related = await fetchRelatedTopics(wiki?.title);
   renderRelated(related);
+
+  // feed the mind map: this topic is now "explored", related topics become "suggested"
+  if (window.NodewayMap) {
+    window.NodewayMap.addExplored(currentTopic, currentField);
+    window.NodewayMap.addSuggested(currentTopic, related);
+  }
 }
 
 // ---------- Drawers / modal ----------
@@ -973,22 +1137,138 @@ scrim.addEventListener("click", () => {
   toggleDrawer(historyDrawer, false);
 });
 
+function refreshProviderHint() {
+  const p = providerSelect.value;
+  const info = PROVIDER_DEFAULTS[p] || PROVIDER_DEFAULTS.none;
+  if (p === "none") {
+    apiKeyInput.disabled = true;
+    modelInput.disabled = true;
+    apiKeyInput.value = "";
+    providerHint.textContent = "No key needed — summaries will use the Wikipedia extract.";
+    return;
+  }
+  apiKeyInput.disabled = false;
+  modelInput.disabled = false;
+  if (!modelInput.value) modelInput.value = info.model;
+  providerHint.textContent = info.keyHelp + " Stored only in this browser's local storage.";
+}
+
 settingsToggle.addEventListener("click", () => {
-  apiKeyInput.value = getApiKey();
+  const settings = getAiSettings();
+  providerSelect.value = settings.provider || "none";
+  apiKeyInput.value = settings.apiKey || "";
+  modelInput.value = settings.model || (PROVIDER_DEFAULTS[settings.provider]?.model ?? "");
+  refreshProviderHint();
   settingsOverlay.hidden = false;
 });
+providerSelect.addEventListener("change", refreshProviderHint);
 closeSettings.addEventListener("click", () => (settingsOverlay.hidden = true));
 settingsOverlay.addEventListener("click", (e) => {
   if (e.target === settingsOverlay) settingsOverlay.hidden = true;
 });
 saveApiKey.addEventListener("click", () => {
-  setApiKey(apiKeyInput.value.trim());
+  const provider = providerSelect.value;
+  setAiSettings({
+    provider,
+    apiKey: apiKeyInput.value.trim(),
+    model: modelInput.value.trim() || (PROVIDER_DEFAULTS[provider]?.model ?? ""),
+  });
   settingsOverlay.hidden = true;
 });
 clearApiKey.addEventListener("click", () => {
-  removeApiKey();
+  clearAiSettings();
+  providerSelect.value = "none";
   apiKeyInput.value = "";
+  modelInput.value = "";
   settingsOverlay.hidden = true;
+});
+
+// ---------- Search suggestions (typeahead against the topic shelf) ----------
+function renderSuggestions(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) {
+    suggestionList.hidden = true;
+    suggestionList.innerHTML = "";
+    return;
+  }
+  const matches = TOPIC_SHELF.filter((t) => t.topic.toLowerCase().includes(q)).slice(0, 6);
+  if (matches.length === 0) {
+    suggestionList.hidden = true;
+    suggestionList.innerHTML = "";
+    return;
+  }
+  suggestionList.innerHTML = matches
+    .map(
+      (t) =>
+        `<button type="button" class="suggestion-item" data-topic="${escapeHtml(t.topic)}">
+           <span>${escapeHtml(t.topic)}</span><span class="suggestion-field">${escapeHtml(t.field)}</span>
+         </button>`
+    )
+    .join("");
+  suggestionList.hidden = false;
+}
+
+topicInput.addEventListener("input", () => renderSuggestions(topicInput.value));
+topicInput.addEventListener("focus", () => renderSuggestions(topicInput.value));
+suggestionList.addEventListener("click", (e) => {
+  const btn = e.target.closest(".suggestion-item");
+  if (!btn) return;
+  const t = btn.dataset.topic;
+  topicInput.value = t;
+  suggestionList.hidden = true;
+  openDossier(t);
+});
+document.addEventListener("click", (e) => {
+  if (!topicInput.contains(e.target) && !suggestionList.contains(e.target)) {
+    suggestionList.hidden = true;
+  }
+});
+
+// ---------- Surprise-me hover popover ----------
+function pickRandomTopics(n) {
+  const pool = [...TOPIC_SHELF];
+  const picks = [];
+  while (picks.length < n && pool.length > 0) {
+    const i = Math.floor(Math.random() * pool.length);
+    picks.push(pool.splice(i, 1)[0]);
+  }
+  return picks;
+}
+
+function renderSurpriseChips() {
+  const picks = pickRandomTopics(5);
+  surpriseChips.innerHTML = picks
+    .map((t) => `<button type="button" class="chip surprise-chip" data-topic="${escapeHtml(t.topic)}">${escapeHtml(t.topic)}</button>`)
+    .join("");
+}
+
+let surpriseHideTimer = null;
+function openSurprisePopover() {
+  clearTimeout(surpriseHideTimer);
+  renderSurpriseChips();
+  surprisePopover.hidden = false;
+}
+function scheduleHideSurprisePopover() {
+  surpriseHideTimer = setTimeout(() => {
+    surprisePopover.hidden = true;
+  }, 250);
+}
+
+surpriseWrap.addEventListener("mouseenter", openSurprisePopover);
+surpriseWrap.addEventListener("mouseleave", scheduleHideSurprisePopover);
+randomBtn.addEventListener("touchstart", (e) => {
+  if (surprisePopover.hidden) {
+    e.preventDefault();
+    openSurprisePopover();
+  }
+});
+surpriseChips.addEventListener("click", (e) => {
+  const chip = e.target.closest(".surprise-chip");
+  if (!chip) return;
+  const t = chip.dataset.topic;
+  topicInput.value = t;
+  surprisePopover.hidden = true;
+  openDossier(t);
 });
 
 // ---------- Form / nav ----------
@@ -996,12 +1276,14 @@ topicForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const val = topicInput.value.trim();
   if (!val) return;
+  suggestionList.hidden = true;
   openDossier(val);
 });
 
 randomBtn.addEventListener("click", () => {
   const pick = pickRandomTopic();
   topicInput.value = pick.topic;
+  surprisePopover.hidden = true;
   openDossier(pick.topic);
 });
 
@@ -1019,8 +1301,225 @@ markReadBtn.addEventListener("click", () => {
   setTimeout(() => (markReadBtn.textContent = "Catalogue this session"), 1600);
 });
 
+// ---------- Mind Map toggle ----------
+const mapToggle = document.getElementById("mapToggle");
+mapToggle.addEventListener("click", () => {
+  if (window.NodewayMap) window.NodewayMap.open();
+});
+
 // ---------- Init ----------
 renderCatalogue();
+
+</script>
+<script>
+// ---------- Mind Map: persisted graph + D3 force-directed render ----------
+(function () {
+  const GRAPH_STORAGE = "nodeway.graph";
+  const MAX_NODES = 120; // keep the map readable and localStorage small
+
+  function loadGraph() {
+    try {
+      const g = JSON.parse(localStorage.getItem(GRAPH_STORAGE));
+      if (g && Array.isArray(g.nodes) && Array.isArray(g.links)) return g;
+    } catch {}
+    return { nodes: [], links: [] };
+  }
+
+  function saveGraph(g) {
+    // trim oldest suggested nodes first if we're over budget
+    if (g.nodes.length > MAX_NODES) {
+      const explored = g.nodes.filter((n) => n.status === "explored");
+      const suggested = g.nodes.filter((n) => n.status !== "explored").slice(-1 * (MAX_NODES - explored.length));
+      const keepIds = new Set([...explored, ...suggested].map((n) => n.id));
+      g.nodes = g.nodes.filter((n) => keepIds.has(n.id));
+      g.links = g.links.filter((l) => keepIds.has(l.source.id || l.source) && keepIds.has(l.target.id || l.target));
+    }
+    localStorage.setItem(GRAPH_STORAGE, JSON.stringify(g));
+  }
+
+  function nodeId(topic) {
+    return topic.trim().toLowerCase();
+  }
+
+  function addExplored(topic, field) {
+    const g = loadGraph();
+    const id = nodeId(topic);
+    const existing = g.nodes.find((n) => n.id === id);
+    if (existing) {
+      existing.status = "explored";
+      existing.field = field;
+      existing.label = topic;
+    } else {
+      g.nodes.push({ id, label: topic, field: field || "general", status: "explored" });
+    }
+    saveGraph(g);
+  }
+
+  function addSuggested(fromTopic, relatedTitles) {
+    if (!relatedTitles || relatedTitles.length === 0) return;
+    const g = loadGraph();
+    const fromId = nodeId(fromTopic);
+    if (!g.nodes.find((n) => n.id === fromId)) {
+      g.nodes.push({ id: fromId, label: fromTopic, field: "general", status: "explored" });
+    }
+    relatedTitles.forEach((title) => {
+      const id = nodeId(title);
+      if (id === fromId) return;
+      if (!g.nodes.find((n) => n.id === id)) {
+        g.nodes.push({ id, label: title, field: "general", status: "suggested" });
+      }
+      const linkExists = g.links.find(
+        (l) => (l.source === fromId || l.source?.id === fromId) && (l.target === id || l.target?.id === id)
+      );
+      if (!linkExists) g.links.push({ source: fromId, target: id });
+    });
+    saveGraph(g);
+  }
+
+  function clearGraph() {
+    localStorage.removeItem(GRAPH_STORAGE);
+  }
+
+  // ---------- Rendering ----------
+  const overlay = document.getElementById("mapOverlay");
+  const svgEl = document.getElementById("mapSvg");
+  const emptyEl = document.getElementById("mapEmpty");
+  const closeBtn = document.getElementById("closeMapBtn");
+  const clearBtn = document.getElementById("clearMapBtn");
+
+  let simulation = null;
+
+  function render() {
+    const g = loadGraph();
+    svgEl.innerHTML = "";
+
+    if (g.nodes.length === 0) {
+      emptyEl.hidden = false;
+      return;
+    }
+    emptyEl.hidden = true;
+
+    const width = svgEl.clientWidth || 900;
+    const height = svgEl.clientHeight || 560;
+
+    const svg = d3.select(svgEl).attr("viewBox", [0, 0, width, height]);
+    const zoomLayer = svg.append("g");
+
+    svg.call(
+      d3.zoom().scaleExtent([0.4, 2.5]).on("zoom", (event) => {
+        zoomLayer.attr("transform", event.transform);
+      })
+    );
+
+    // deep-copy so d3 can mutate x/y without corrupting storage until we save on drag end
+    const nodes = g.nodes.map((n) => ({ ...n }));
+    const links = g.links.map((l) => ({ ...l }));
+
+    if (simulation) simulation.stop();
+    simulation = d3
+      .forceSimulation(nodes)
+      .force("link", d3.forceLink(links).id((d) => d.id).distance(90).strength(0.6))
+      .force("charge", d3.forceManyBody().strength(-220))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collide", d3.forceCollide().radius(34));
+
+    const link = zoomLayer
+      .append("g")
+      .attr("stroke", "#c7cae0")
+      .attr("stroke-width", 1.4)
+      .selectAll("line")
+      .data(links)
+      .join("line");
+
+    const node = zoomLayer
+      .append("g")
+      .selectAll("g")
+      .data(nodes)
+      .join("g")
+      .attr("class", "map-node")
+      .style("cursor", "pointer")
+      .call(
+        d3
+          .drag()
+          .on("start", (event, d) => {
+            if (!event.active) simulation.alphaTarget(0.25).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+          })
+          .on("drag", (event, d) => {
+            d.fx = event.x;
+            d.fy = event.y;
+          })
+          .on("end", (event, d) => {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+          })
+      )
+      .on("click", (event, d) => {
+        overlay.hidden = true;
+        const input = document.getElementById("topicInput");
+        input.value = d.label;
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        // openDossier is defined in app.js, in the same global scope
+        if (typeof openDossier === "function") openDossier(d.label);
+      });
+
+    node
+      .append("circle")
+      .attr("r", (d) => (d.status === "explored" ? 12 : 8))
+      .attr("fill", (d) => (d.status === "explored" ? "#16a394" : "#4c4fe0"))
+      .attr("fill-opacity", (d) => (d.status === "explored" ? 1 : 0.55))
+      .attr("stroke", "#fff")
+      .attr("stroke-width", 2);
+
+    node
+      .append("text")
+      .text((d) => d.label)
+      .attr("x", 16)
+      .attr("y", 4)
+      .attr("font-family", "Inter, sans-serif")
+      .attr("font-size", 11)
+      .attr("font-weight", (d) => (d.status === "explored" ? 700 : 500))
+      .attr("fill", "#14161f")
+      .style("pointer-events", "none");
+
+    simulation.on("tick", () => {
+      link
+        .attr("x1", (d) => d.source.x)
+        .attr("y1", (d) => d.source.y)
+        .attr("x2", (d) => d.target.x)
+        .attr("y2", (d) => d.target.y);
+      node.attr("transform", (d) => `translate(${d.x},${d.y})`);
+    });
+  }
+
+  function open() {
+    overlay.hidden = false;
+    // render after the overlay is visible so clientWidth/Height are correct
+    requestAnimationFrame(render);
+  }
+  function close() {
+    overlay.hidden = true;
+    if (simulation) simulation.stop();
+  }
+
+  closeBtn.addEventListener("click", close);
+  clearBtn.addEventListener("click", () => {
+    if (confirm("Clear the entire mind map? This can't be undone.")) {
+      clearGraph();
+      render();
+    }
+  });
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+  window.addEventListener("resize", () => {
+    if (!overlay.hidden) render();
+  });
+
+  window.NodewayMap = { addExplored, addSuggested, clearGraph, open, close };
+})();
 
 </script>
 </body>

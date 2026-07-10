@@ -8,6 +8,10 @@ const dossierSection = document.getElementById("dossier");
 const topicForm = document.getElementById("topicForm");
 const topicInput = document.getElementById("topicInput");
 const randomBtn = document.getElementById("randomBtn");
+const suggestionList = document.getElementById("suggestionList");
+const surpriseWrap = document.getElementById("surpriseWrap");
+const surprisePopover = document.getElementById("surprisePopover");
+const surpriseChips = document.getElementById("surpriseChips");
 
 const dossierField = document.getElementById("dossierField");
 const dossierTitle = document.getElementById("dossierTitle");
@@ -34,11 +38,21 @@ const historyList = document.getElementById("historyList");
 const settingsToggle = document.getElementById("settingsToggle");
 const settingsOverlay = document.getElementById("settingsOverlay");
 const closeSettings = document.getElementById("closeSettings");
+const providerSelect = document.getElementById("providerSelect");
 const apiKeyInput = document.getElementById("apiKeyInput");
+const modelInput = document.getElementById("modelInput");
+const providerHint = document.getElementById("providerHint");
 const saveApiKey = document.getElementById("saveApiKey");
 const clearApiKey = document.getElementById("clearApiKey");
 
 const scrim = document.getElementById("scrim");
+
+// default model per provider — editable by the user in Settings if these drift
+const PROVIDER_DEFAULTS = {
+  anthropic: { model: "claude-haiku-4-5-20251001", keyHelp: "Get a key at console.anthropic.com. Paid, pay-as-you-go — pennies per summary on Haiku." },
+  gemini: { model: "gemini-2.5-flash", keyHelp: "Get a free key at aistudio.google.com/apikey. Gemini's free tier covers this kind of use easily." },
+  none: { model: "", keyHelp: "" },
+};
 
 // ---------- Utilities ----------
 function escapeHtml(str) {
@@ -51,11 +65,21 @@ function truncate(str, n) {
   return str.length > n ? str.slice(0, n).trim() + "…" : str;
 }
 
-// ---------- API key storage ----------
-const KEY_STORAGE = "fieldlog.anthropicKey";
-function getApiKey() { return localStorage.getItem(KEY_STORAGE) || ""; }
-function setApiKey(key) { localStorage.setItem(KEY_STORAGE, key); }
-function removeApiKey() { localStorage.removeItem(KEY_STORAGE); }
+// ---------- AI provider settings storage ----------
+const SETTINGS_STORAGE = "nodeway.aiSettings";
+function getAiSettings() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SETTINGS_STORAGE));
+    if (raw && raw.provider) return raw;
+  } catch {}
+  return { provider: "none", apiKey: "", model: "" };
+}
+function setAiSettings(settings) {
+  localStorage.setItem(SETTINGS_STORAGE, JSON.stringify(settings));
+}
+function clearAiSettings() {
+  localStorage.removeItem(SETTINGS_STORAGE);
+}
 
 // ---------- Catalogue (localStorage) ----------
 const STORAGE_KEY = "fieldlog.catalogue";
@@ -128,36 +152,66 @@ async function fetchRelatedTopics(wikiTitle) {
   }
 }
 
-// ---------- AI summary (optional, needs user's own Anthropic key) ----------
-async function fetchAiSummary(topic) {
-  const key = getApiKey();
-  if (!key) return null;
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+// ---------- AI summary (optional, needs the user's own API key) ----------
+const AI_PROMPT = (topic) =>
+  `Give a sharp, concrete 2-paragraph primer on "${topic}" for someone starting to go deep on it. First paragraph: what it actually is and why it matters. Second paragraph: the 2-3 central tensions or open questions in the field right now. Plain language, no fluff, no "in conclusion." Do not use markdown headers.`;
+
+async function fetchAiSummaryAnthropic(topic, key, model) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": key,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify({
+      model: model || PROVIDER_DEFAULTS.anthropic.model,
+      max_tokens: 400,
+      messages: [{ role: "user", content: AI_PROMPT(topic) }],
+    }),
+  });
+  if (!res.ok) throw new Error("anthropic api error " + res.status);
+  const data = await res.json();
+  return (data.content || [])
+    .filter((b) => b.type === "text")
+    .map((b) => b.text)
+    .join("\n\n");
+}
+
+async function fetchAiSummaryGemini(topic, key, model) {
+  const m = model || PROVIDER_DEFAULTS.gemini.model;
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`,
+    {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true",
+        "x-goog-api-key": key,
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 400,
-        messages: [
-          {
-            role: "user",
-            content: `Give a sharp, concrete 2-paragraph primer on "${topic}" for someone starting to go deep on it. First paragraph: what it actually is and why it matters. Second paragraph: the 2-3 central tensions or open questions in the field right now. Plain language, no fluff, no "in conclusion." Do not use markdown headers.`,
-          },
-        ],
+        contents: [{ parts: [{ text: AI_PROMPT(topic) }] }],
       }),
-    });
-    if (!res.ok) throw new Error("api error " + res.status);
-    const data = await res.json();
-    const text = (data.content || [])
-      .filter((b) => b.type === "text")
-      .map((b) => b.text)
-      .join("\n\n");
+    }
+  );
+  if (!res.ok) throw new Error("gemini api error " + res.status);
+  const data = await res.json();
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  return parts.map((p) => p.text || "").join("\n\n");
+}
+
+async function fetchAiSummary(topic) {
+  const settings = getAiSettings();
+  if (!settings.provider || settings.provider === "none" || !settings.apiKey) return null;
+  try {
+    let text;
+    if (settings.provider === "anthropic") {
+      text = await fetchAiSummaryAnthropic(topic, settings.apiKey, settings.model);
+    } else if (settings.provider === "gemini") {
+      text = await fetchAiSummaryGemini(topic, settings.apiKey, settings.model);
+    } else {
+      return null;
+    }
     return text || null;
   } catch (err) {
     return null;
@@ -233,8 +287,10 @@ async function fetchSemanticScholar(topic) {
 // ---------- Rendering ----------
 function renderSummary(aiText, wiki, topic) {
   if (aiText) {
+    const settings = getAiSettings();
+    const providerLabel = settings.provider === "gemini" ? "AI · Gemini" : settings.provider === "anthropic" ? "AI · Claude" : "AI";
     summaryHeading.textContent = "AI Summary";
-    summaryBadge.textContent = "AI";
+    summaryBadge.textContent = providerLabel;
     summaryBadge.classList.remove("wiki-badge");
     primerBody.innerHTML = aiText
       .split(/\n{2,}/)
@@ -249,7 +305,7 @@ function renderSummary(aiText, wiki, topic) {
     primerBody.innerHTML = `<p class="error-text">Couldn't pull an overview for "${escapeHtml(topic)}". Try a more standard name for it.</p>`;
     return;
   }
-  primerBody.innerHTML = `<p>${escapeHtml(wiki.extract)}</p><p class="source-note">Wikipedia extract — add an Anthropic API key in Settings for an AI-generated version instead.</p>`;
+  primerBody.innerHTML = `<p>${escapeHtml(wiki.extract)}</p><p class="source-note">Wikipedia extract — add an API key (Claude or Gemini) in Settings for an AI-generated version instead.</p>`;
 }
 
 function renderImages(wikiThumb, openverseImages, topic) {
@@ -348,6 +404,12 @@ async function openDossier(topic) {
 
   const related = await fetchRelatedTopics(wiki?.title);
   renderRelated(related);
+
+  // feed the mind map: this topic is now "explored", related topics become "suggested"
+  if (window.NodewayMap) {
+    window.NodewayMap.addExplored(currentTopic, currentField);
+    window.NodewayMap.addSuggested(currentTopic, related);
+  }
 }
 
 // ---------- Drawers / modal ----------
@@ -365,22 +427,138 @@ scrim.addEventListener("click", () => {
   toggleDrawer(historyDrawer, false);
 });
 
+function refreshProviderHint() {
+  const p = providerSelect.value;
+  const info = PROVIDER_DEFAULTS[p] || PROVIDER_DEFAULTS.none;
+  if (p === "none") {
+    apiKeyInput.disabled = true;
+    modelInput.disabled = true;
+    apiKeyInput.value = "";
+    providerHint.textContent = "No key needed — summaries will use the Wikipedia extract.";
+    return;
+  }
+  apiKeyInput.disabled = false;
+  modelInput.disabled = false;
+  if (!modelInput.value) modelInput.value = info.model;
+  providerHint.textContent = info.keyHelp + " Stored only in this browser's local storage.";
+}
+
 settingsToggle.addEventListener("click", () => {
-  apiKeyInput.value = getApiKey();
+  const settings = getAiSettings();
+  providerSelect.value = settings.provider || "none";
+  apiKeyInput.value = settings.apiKey || "";
+  modelInput.value = settings.model || (PROVIDER_DEFAULTS[settings.provider]?.model ?? "");
+  refreshProviderHint();
   settingsOverlay.hidden = false;
 });
+providerSelect.addEventListener("change", refreshProviderHint);
 closeSettings.addEventListener("click", () => (settingsOverlay.hidden = true));
 settingsOverlay.addEventListener("click", (e) => {
   if (e.target === settingsOverlay) settingsOverlay.hidden = true;
 });
 saveApiKey.addEventListener("click", () => {
-  setApiKey(apiKeyInput.value.trim());
+  const provider = providerSelect.value;
+  setAiSettings({
+    provider,
+    apiKey: apiKeyInput.value.trim(),
+    model: modelInput.value.trim() || (PROVIDER_DEFAULTS[provider]?.model ?? ""),
+  });
   settingsOverlay.hidden = true;
 });
 clearApiKey.addEventListener("click", () => {
-  removeApiKey();
+  clearAiSettings();
+  providerSelect.value = "none";
   apiKeyInput.value = "";
+  modelInput.value = "";
   settingsOverlay.hidden = true;
+});
+
+// ---------- Search suggestions (typeahead against the topic shelf) ----------
+function renderSuggestions(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) {
+    suggestionList.hidden = true;
+    suggestionList.innerHTML = "";
+    return;
+  }
+  const matches = TOPIC_SHELF.filter((t) => t.topic.toLowerCase().includes(q)).slice(0, 6);
+  if (matches.length === 0) {
+    suggestionList.hidden = true;
+    suggestionList.innerHTML = "";
+    return;
+  }
+  suggestionList.innerHTML = matches
+    .map(
+      (t) =>
+        `<button type="button" class="suggestion-item" data-topic="${escapeHtml(t.topic)}">
+           <span>${escapeHtml(t.topic)}</span><span class="suggestion-field">${escapeHtml(t.field)}</span>
+         </button>`
+    )
+    .join("");
+  suggestionList.hidden = false;
+}
+
+topicInput.addEventListener("input", () => renderSuggestions(topicInput.value));
+topicInput.addEventListener("focus", () => renderSuggestions(topicInput.value));
+suggestionList.addEventListener("click", (e) => {
+  const btn = e.target.closest(".suggestion-item");
+  if (!btn) return;
+  const t = btn.dataset.topic;
+  topicInput.value = t;
+  suggestionList.hidden = true;
+  openDossier(t);
+});
+document.addEventListener("click", (e) => {
+  if (!topicInput.contains(e.target) && !suggestionList.contains(e.target)) {
+    suggestionList.hidden = true;
+  }
+});
+
+// ---------- Surprise-me hover popover ----------
+function pickRandomTopics(n) {
+  const pool = [...TOPIC_SHELF];
+  const picks = [];
+  while (picks.length < n && pool.length > 0) {
+    const i = Math.floor(Math.random() * pool.length);
+    picks.push(pool.splice(i, 1)[0]);
+  }
+  return picks;
+}
+
+function renderSurpriseChips() {
+  const picks = pickRandomTopics(5);
+  surpriseChips.innerHTML = picks
+    .map((t) => `<button type="button" class="chip surprise-chip" data-topic="${escapeHtml(t.topic)}">${escapeHtml(t.topic)}</button>`)
+    .join("");
+}
+
+let surpriseHideTimer = null;
+function openSurprisePopover() {
+  clearTimeout(surpriseHideTimer);
+  renderSurpriseChips();
+  surprisePopover.hidden = false;
+}
+function scheduleHideSurprisePopover() {
+  surpriseHideTimer = setTimeout(() => {
+    surprisePopover.hidden = true;
+  }, 250);
+}
+
+surpriseWrap.addEventListener("mouseenter", openSurprisePopover);
+surpriseWrap.addEventListener("mouseleave", scheduleHideSurprisePopover);
+randomBtn.addEventListener("touchstart", (e) => {
+  if (surprisePopover.hidden) {
+    e.preventDefault();
+    openSurprisePopover();
+  }
+});
+surpriseChips.addEventListener("click", (e) => {
+  const chip = e.target.closest(".surprise-chip");
+  if (!chip) return;
+  const t = chip.dataset.topic;
+  topicInput.value = t;
+  surprisePopover.hidden = true;
+  openDossier(t);
 });
 
 // ---------- Form / nav ----------
@@ -388,12 +566,14 @@ topicForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const val = topicInput.value.trim();
   if (!val) return;
+  suggestionList.hidden = true;
   openDossier(val);
 });
 
 randomBtn.addEventListener("click", () => {
   const pick = pickRandomTopic();
   topicInput.value = pick.topic;
+  surprisePopover.hidden = true;
   openDossier(pick.topic);
 });
 
@@ -409,6 +589,12 @@ markReadBtn.addEventListener("click", () => {
   saveToCatalogue(currentTopic, currentField);
   markReadBtn.textContent = "Catalogued ✓";
   setTimeout(() => (markReadBtn.textContent = "Catalogue this session"), 1600);
+});
+
+// ---------- Mind Map toggle ----------
+const mapToggle = document.getElementById("mapToggle");
+mapToggle.addEventListener("click", () => {
+  if (window.NodewayMap) window.NodewayMap.open();
 });
 
 // ---------- Init ----------

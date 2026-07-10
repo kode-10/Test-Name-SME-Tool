@@ -17,6 +17,7 @@
       <span class="brand-name">nodeway</span>
     </div>
     <div class="topbar-actions">
+      <button id="mapToggle" class="pill-btn">Mind Map</button>
       <button id="pathToggle" class="pill-btn">The Path</button>
       <button id="historyToggle" class="pill-btn">Catalogue <span id="historyCount">0</span></button>
       <button id="settingsToggle" class="icon-btn" title="Settings" aria-label="Settings">
@@ -50,7 +51,15 @@
       <input type="text" id="topicInput" placeholder="maritime law, CRISPR, behavioral economics, thermodynamics…" autocomplete="off">
       <button type="submit" class="btn-primary">Build the map</button>
     </form>
-    <button type="button" id="randomBtn" class="link-btn">or let me pick — surprise me</button>
+    <div id="suggestionList" class="suggestion-list" hidden></div>
+
+    <div class="surprise-wrap" id="surpriseWrap">
+      <button type="button" id="randomBtn" class="link-btn">or let me pick — surprise me</button>
+      <div class="surprise-popover" id="surprisePopover" hidden>
+        <p class="surprise-popover-label">Pick one, or click "surprise me" for fully random</p>
+        <div class="surprise-chips" id="surpriseChips"></div>
+      </div>
+    </div>
   </section>
 
   <section class="dossier" id="dossier" hidden>
@@ -138,22 +147,52 @@
       <h3>Settings</h3>
       <button id="closeSettings" class="icon-btn" aria-label="Close">✕</button>
     </div>
-    <label class="modal-label" for="apiKeyInput">Anthropic API key (optional)</label>
-    <input type="password" id="apiKeyInput" class="modal-input" placeholder="sk-ant-…">
-    <p class="modal-hint">
+    <label class="modal-label" for="providerSelect">AI provider (optional)</label>
+    <select id="providerSelect" class="modal-input">
+      <option value="none">None — use Wikipedia extract only</option>
+      <option value="anthropic">Anthropic (Claude)</option>
+      <option value="gemini">Google AI Studio (Gemini) — free tier</option>
+    </select>
+
+    <label class="modal-label" for="apiKeyInput">API key</label>
+    <input type="password" id="apiKeyInput" class="modal-input" placeholder="paste your key here">
+
+    <label class="modal-label" for="modelInput">Model</label>
+    <input type="text" id="modelInput" class="modal-input" placeholder="model name">
+
+    <p class="modal-hint" id="providerHint">
       Stored only in this browser's local storage — never sent anywhere except directly to
-      Anthropic's API when generating a summary. Without a key, summaries fall back to the
-      first paragraph of the relevant Wikipedia article. Get a key at
-      <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>.
+      the provider's API when generating a summary. Without a key, summaries fall back to the
+      first paragraph of the relevant Wikipedia article.
     </p>
-    <button id="saveApiKey" class="btn-primary">Save key</button>
+    <button id="saveApiKey" class="btn-primary">Save</button>
     <button id="clearApiKey" class="btn-ghost">Clear key</button>
   </div>
 </div>
 
 <div class="scrim" id="scrim" hidden></div>
 
+<!-- Mind Map overlay -->
+<div class="map-overlay" id="mapOverlay" hidden>
+  <div class="map-head">
+    <div>
+      <h3>Mind Map</h3>
+      <p class="drawer-sub">Teal = topics you've opened. Indigo = suggested, not explored yet. Click any node.</p>
+    </div>
+    <div class="map-head-actions">
+      <button id="clearMapBtn" class="btn-ghost">Clear map</button>
+      <button id="closeMapBtn" class="icon-btn" aria-label="Close">✕</button>
+    </div>
+  </div>
+  <div class="map-canvas-wrap">
+    <svg id="mapSvg"></svg>
+    <p id="mapEmpty" class="map-empty" hidden>Open a topic to start building your map.</p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="js/topics.js"></script>
 <script src="js/app.js"></script>
+<script src="js/mindmap.js"></script>
 </body>
 </html>
