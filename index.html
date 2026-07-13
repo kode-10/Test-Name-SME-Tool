@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nodeway — go deep on anything</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Dive In — go deep on anything</title>
+<meta name="description" content="A research map for anything you're curious about.">
+<meta name="theme-color" content="#4c4fe0">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -14,11 +19,15 @@
   <div class="topbar-inner">
     <div class="brand">
       <span class="brand-node"><span class="dot dot-a"></span><span class="edge"></span><span class="dot dot-b"></span></span>
-      <span class="brand-name">nodeway</span>
+      <span class="brand-name">Dive In</span>
     </div>
     <div class="topbar-actions">
+      <button id="themeToggle" class="icon-btn" title="Toggle dark mode" aria-label="Toggle dark mode">
+        <svg id="themeIconSun" width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.5v2.5M12 19v2.5M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2.5 12H5M19 12h2.5M4.2 19.8L6 18M18 6l1.8-1.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <svg id="themeIconMoon" width="17" height="17" viewBox="0 0 24 24" fill="none" hidden><path d="M20 14.5A8.5 8.5 0 119.5 4a7 7 0 1010.5 10.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </button>
       <button id="mapToggle" class="pill-btn">Mind Map</button>
-      <button id="pathToggle" class="pill-btn">The Path</button>
+      <button id="pathToggle" class="pill-btn hide-narrow">The Path</button>
       <button id="historyToggle" class="pill-btn">Catalogue <span id="historyCount">0</span></button>
       <button id="settingsToggle" class="icon-btn" title="Settings" aria-label="Settings">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 13a7.97 7.97 0 000-2l2.1-1.6-2-3.4-2.5 1a8 8 0 00-1.7-1L14.9 3h-4l-.4 2.9a8 8 0 00-1.7 1l-2.5-1-2 3.4L6.4 11a8 8 0 000 2l-2.1 1.6 2 3.4 2.5-1a8 8 0 001.7 1L10.9 21h4l.4-2.9a8 8 0 001.7-1l2.5 1 2-3.4L19.4 13z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
@@ -47,10 +56,10 @@
       </svg>
     </div>
     <p class="eyebrow">a research map for anything you're curious about</p>
-    <h1 class="hero-title">What are you exploring today?</h1>
+    <h1 class="hero-title">What are you diving into today?</h1>
     <form id="topicForm" class="hero-form">
       <input type="text" id="topicInput" placeholder="maritime law, CRISPR, behavioral economics, thermodynamics…" autocomplete="off">
-      <button type="submit" class="btn-primary">Build the map</button>
+      <button type="submit" class="btn-primary">Dive in</button>
     </form>
     <div id="suggestionList" class="suggestion-list" hidden></div>
 
@@ -90,7 +99,7 @@
 
       <article class="node-card node-card-images">
         <div class="node-card-head"><h3>Visuals</h3></div>
-        <div id="imagesBody" class="images-grid">
+        <div id="imagesBody" class="images-carousel">
           <p class="loading">Fetching images…</p>
         </div>
       </article>
@@ -108,7 +117,7 @@
       <article class="node-card node-card-related">
         <div class="node-card-head"><h3>Explore Next</h3></div>
         <div id="relatedBody" class="chips-row">
-          <p class="loading">Finding related nodes…</p>
+          <p class="loading">Finding what to learn next…</p>
         </div>
       </article>
 
@@ -151,32 +160,65 @@
 <div class="modal-overlay" id="settingsOverlay" hidden>
   <div class="modal modal-wide">
     <div class="drawer-head">
-      <h3>AI Connections</h3>
+      <h3>Settings</h3>
       <button id="closeSettings" class="icon-btn" aria-label="Close">✕</button>
     </div>
-    <p class="drawer-sub">
-      Add one or more providers. The one marked "active" powers AI Summary and
-      paper insights. Nothing here leaves your browser except direct calls to
-      the provider you choose.
-    </p>
 
-    <div id="connectionsList" class="connections-list"></div>
+    <div class="settings-tabs">
+      <button class="settings-tab active" data-tab="connections">AI Connections</button>
+      <button class="settings-tab" data-tab="tuning">Tone &amp; Expertise</button>
+    </div>
 
-    <div class="connection-form">
-      <label class="modal-label" for="newProviderType">Add a connection</label>
-      <select id="newProviderType" class="modal-input">
-        <option value="gemini">Google AI Studio (Gemini) — free</option>
-        <option value="anthropic">Anthropic (Claude)</option>
-        <option value="openai-compatible">Other (OpenAI-compatible) — Groq, OpenRouter, etc.</option>
-      </select>
+    <div class="settings-pane" id="paneConnections">
+      <p class="drawer-sub">
+        Add one or more providers. The one marked "active" powers AI Summary and
+        paper insights. Nothing here leaves your browser except direct calls to
+        the provider you choose.
+      </p>
 
-      <input type="text" id="newBaseUrl" class="modal-input" placeholder="Base URL, e.g. https://api.groq.com/openai/v1" hidden>
-      <input type="password" id="newApiKey" class="modal-input" placeholder="API key">
-      <input type="text" id="newModel" class="modal-input" placeholder="model name">
-      <input type="text" id="newNickname" class="modal-input" placeholder="Nickname (optional)">
+      <div id="connectionsList" class="connections-list"></div>
 
-      <p class="modal-hint" id="newProviderHint"></p>
-      <button id="addConnectionBtn" class="btn-primary">Add connection</button>
+      <div class="connection-form">
+        <label class="modal-label" for="newProviderType">Add a connection</label>
+        <select id="newProviderType" class="modal-input">
+          <option value="gemini">Google AI Studio (Gemini) — free</option>
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="openai-compatible">Other (OpenAI-compatible) — Groq, OpenRouter, etc.</option>
+        </select>
+
+        <input type="text" id="newBaseUrl" class="modal-input" placeholder="Base URL, e.g. https://api.groq.com/openai/v1" hidden>
+        <input type="password" id="newApiKey" class="modal-input" placeholder="API key">
+        <input type="text" id="newModel" class="modal-input" placeholder="model name">
+        <input type="text" id="newNickname" class="modal-input" placeholder="Nickname (optional)">
+
+        <p class="modal-hint" id="newProviderHint"></p>
+        <button id="addConnectionBtn" class="btn-primary">Add connection</button>
+      </div>
+    </div>
+
+    <div class="settings-pane" id="paneTuning" hidden>
+      <p class="drawer-sub">Shapes every AI Summary and paper insight from here on.</p>
+
+      <label class="modal-label">Tone</label>
+      <div class="tone-options" id="toneOptions">
+        <button type="button" class="tone-chip active" data-tone="direct">Direct &amp; Analytical</button>
+        <button type="button" class="tone-chip" data-tone="friendly">Friendly Mentor</button>
+        <button type="button" class="tone-chip" data-tone="academic">Academic &amp; Formal</button>
+        <button type="button" class="tone-chip" data-tone="custom">Custom…</button>
+      </div>
+      <textarea id="customToneInput" class="modal-input modal-textarea" placeholder="Describe the tone you want, e.g. 'witty but precise, short sentences, the occasional dry joke'" hidden></textarea>
+
+      <label class="modal-label" for="expertiseSlider">
+        Expertise level — <span id="expertiseLabel">Intermediate</span>
+      </label>
+      <input type="range" id="expertiseSlider" class="modal-slider" min="1" max="5" value="3" step="1">
+      <div class="slider-scale"><span>Beginner</span><span>Expert</span></div>
+      <p class="modal-hint">
+        Beginner: simple language, analogies, worked examples. Expert: precise
+        technical vocabulary, dense insight, no hand-holding.
+      </p>
+
+      <button id="saveTuning" class="btn-primary">Save</button>
     </div>
   </div>
 </div>
@@ -188,7 +230,7 @@
   <div class="map-head">
     <div>
       <h3>Mind Map</h3>
-      <p class="drawer-sub">Teal = topics you've opened. Indigo = suggested, not explored yet. Click any node.</p>
+      <p class="drawer-sub">Teal = explored. Indigo = suggested. Blobs are learning clusters — double-click a label to rename it.</p>
     </div>
     <div class="map-head-actions">
       <button id="clearMapBtn" class="btn-ghost">Clear map</button>
@@ -220,5 +262,12 @@
 <script src="js/connections.js"></script>
 <script src="js/app.js"></script>
 <script src="js/mindmap.js"></script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("service-worker.js").catch(() => {});
+    });
+  }
+</script>
 </body>
 </html>

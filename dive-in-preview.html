@@ -1,0 +1,2375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Dive In — go deep on anything</title>
+<meta name="description" content="A research map for anything you're curious about.">
+<meta name="theme-color" content="#4c4fe0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #e7eaf1;
+  --text: #2c2f38;
+  --text-muted: #6b7280;
+  --shadow-light: #ffffff;
+  --shadow-dark: #b6bccb;
+  --indigo: #4c4fe0;
+  --indigo-dark: #3a3dc2;
+  --indigo-soft: #dcdcfb;
+  --teal: #109384;
+  --teal-soft: #d3f0ec;
+  --danger: #c94b4b;
+  --ok: #29975a;
+  --radius: 20px;
+  --radius-sm: 12px;
+
+  --display: "Inter", -apple-system, sans-serif;
+  --mono: "JetBrains Mono", monospace;
+
+  --shadow-out: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
+  --shadow-out-sm: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+  --shadow-in: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
+  --shadow-in-sm: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+}
+
+[data-theme="dark"] {
+  --bg: #2a2e37;
+  --text: #e9ebf2;
+  --text-muted: #9aa0b2;
+  --shadow-light: #363b47;
+  --shadow-dark: #14161b;
+  --indigo: #8385ff;
+  --indigo-dark: #a3a5ff;
+  --indigo-soft: #383a5c;
+  --teal: #3fd6c3;
+  --teal-soft: #274543;
+  --danger: #e37272;
+  --ok: #4fce8b;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--display);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+a { color: var(--indigo); }
+button, input, select, textarea { font-family: inherit; color: inherit; }
+
+/* ---------- neomorphic utility classes ---------- */
+.neo-raised { background: var(--bg); border-radius: var(--radius); box-shadow: var(--shadow-out); }
+.neo-raised-sm { background: var(--bg); border-radius: var(--radius-sm); box-shadow: var(--shadow-out-sm); }
+.neo-inset { background: var(--bg); border-radius: var(--radius-sm); box-shadow: var(--shadow-in); }
+
+/* ---------- Topbar ---------- */
+.topbar {
+  background: var(--bg);
+  position: sticky; top: 0; z-index: 30;
+  padding: 14px 0;
+}
+.topbar-inner {
+  max-width: 1200px; margin: 0 auto;
+  padding: 0 28px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-node { display: inline-flex; align-items: center; width: 34px; height: 14px; position: relative; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--indigo); flex-shrink: 0; z-index: 1; }
+.dot-b { background: var(--teal); margin-left: auto; }
+.edge { position: absolute; left: 8px; right: 8px; top: 50%; height: 2px; background: var(--shadow-dark); transform: translateY(-50%); }
+.brand-name { font-weight: 800; font-size: 1.15rem; letter-spacing: -0.02em; }
+
+.topbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pill-btn {
+  background: var(--bg); border: none; box-shadow: var(--shadow-out-sm);
+  color: var(--text); font-family: var(--display); font-weight: 600; font-size: 0.82rem;
+  padding: 10px 16px; border-radius: 999px; cursor: pointer;
+  transition: box-shadow 0.12s ease, color 0.15s ease;
+}
+.pill-btn:hover { color: var(--indigo); }
+.pill-btn:active { box-shadow: var(--shadow-in-sm); }
+.pill-btn span { color: var(--text-muted); font-family: var(--mono); font-size: 0.75rem; margin-left: 4px; }
+.icon-btn {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--bg); border: none; box-shadow: var(--shadow-out-sm);
+  color: var(--text-muted); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: box-shadow 0.12s ease, color 0.15s ease; position: relative;
+  flex-shrink: 0;
+}
+.icon-btn:hover { color: var(--indigo); }
+.icon-btn:active { box-shadow: var(--shadow-in-sm); }
+.gear-status-dot {
+  position: absolute; top: 0px; right: 0px;
+  width: 10px; height: 10px; border-radius: 50%;
+  border: 2px solid var(--bg); box-sizing: content-box;
+}
+.gear-status-dot.status-ok { background: var(--ok); }
+.gear-status-dot.status-error { background: var(--danger); }
+.gear-status-dot.status-unknown { background: #9aa0b2; }
+
+/* ---------- Stage / hero ---------- */
+.stage { max-width: 1200px; margin: 0 auto; padding: 0 28px 100px; }
+
+.hero {
+  position: relative;
+  max-width: 640px; margin: 0 auto;
+  padding: 70px 0 40px;
+  text-align: center;
+}
+.hero-graphic { display: flex; justify-content: center; margin-bottom: 8px; opacity: 0.85; }
+.graph-svg { width: 220px; height: 110px; }
+.graph-edge { stroke: var(--shadow-dark); stroke-width: 2; }
+.graph-node { fill: var(--indigo); }
+.graph-node-center { fill: var(--teal); }
+
+.eyebrow {
+  font-family: var(--mono); font-size: 0.78rem; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--indigo); margin: 0 0 10px;
+}
+.hero-title {
+  font-size: 2.3rem; font-weight: 800; letter-spacing: -0.03em;
+  margin: 0 0 32px; line-height: 1.2;
+}
+.hero-form { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+#topicInput {
+  flex: 1; min-width: 260px;
+  background: var(--bg); border: none; box-shadow: var(--shadow-in);
+  border-radius: var(--radius-sm); padding: 16px 18px; font-size: 0.98rem;
+  color: var(--text);
+}
+#topicInput:focus { outline: none; }
+#topicInput::placeholder { color: var(--text-muted); }
+
+.btn-primary {
+  background: var(--indigo); color: #fff; border: none;
+  font-family: var(--display); font-weight: 600; font-size: 0.95rem;
+  padding: 15px 26px; border-radius: var(--radius-sm); cursor: pointer;
+  box-shadow: var(--shadow-out-sm);
+  transition: box-shadow 0.12s ease, transform 0.08s ease;
+  white-space: nowrap;
+}
+.btn-primary:hover { filter: brightness(1.06); }
+.btn-primary:active { box-shadow: var(--shadow-in-sm); transform: scale(0.99); }
+
+.btn-ghost {
+  background: var(--bg); border: none; box-shadow: var(--shadow-out-sm); color: var(--text);
+  font-family: var(--display); font-weight: 600; font-size: 0.9rem;
+  padding: 13px 20px; border-radius: var(--radius-sm); cursor: pointer;
+}
+.btn-ghost:hover { color: var(--indigo); }
+.btn-ghost:active { box-shadow: var(--shadow-in-sm); }
+
+.link-btn {
+  margin-top: 18px; background: none; border: none; color: var(--text-muted);
+  font-family: var(--display); font-size: 0.85rem; cursor: pointer; text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.link-btn:hover { color: var(--indigo); }
+
+/* ---------- Search suggestions ---------- */
+.suggestion-list {
+  text-align: left;
+  background: var(--bg); border-radius: var(--radius-sm);
+  margin-top: 10px; overflow: hidden; box-shadow: var(--shadow-out);
+}
+.suggestion-item {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; background: none; border: none;
+  padding: 12px 16px; font-family: var(--display); font-size: 0.88rem; color: var(--text);
+  cursor: pointer; text-align: left;
+}
+.suggestion-item:hover { color: var(--indigo); }
+.suggestion-field {
+  font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase;
+  color: var(--text-muted); letter-spacing: 0.04em;
+}
+
+/* ---------- Surprise-me popover ---------- */
+.surprise-wrap { position: relative; display: inline-block; }
+.surprise-popover {
+  position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  margin-top: 14px; width: 320px; max-width: 82vw;
+  background: var(--bg); border-radius: var(--radius); box-shadow: var(--shadow-out);
+  padding: 16px 18px; z-index: 25; text-align: left;
+}
+.surprise-popover-label {
+  font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--text-muted); margin: 0 0 10px;
+}
+.surprise-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.surprise-chip {
+  background: var(--bg); color: var(--indigo); border: none; box-shadow: var(--shadow-out-sm);
+  font-family: var(--display); font-weight: 600; font-size: 0.78rem;
+  padding: 8px 13px; border-radius: 999px; cursor: pointer;
+}
+.surprise-chip:active { box-shadow: var(--shadow-in-sm); }
+
+/* ---------- Dossier ---------- */
+.dossier { padding-top: 36px; }
+.dossier-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px; margin-bottom: 24px; flex-wrap: wrap;
+}
+.field-tag {
+  font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--teal); margin: 0 0 6px;
+}
+#dossierTitle { font-size: 1.9rem; font-weight: 800; letter-spacing: -0.02em; margin: 0; text-transform: capitalize; }
+
+.dossier-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 22px;
+}
+.node-card-papers, .node-card-related { grid-column: 1 / -1; }
+
+.node-card {
+  background: var(--bg); border-radius: var(--radius); box-shadow: var(--shadow-out);
+  padding: 24px 26px;
+}
+.node-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+.node-card-head h3 { font-size: 0.98rem; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+.node-badge {
+  font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase;
+  background: var(--indigo-soft); color: var(--indigo);
+  padding: 4px 10px; border-radius: 999px; letter-spacing: 0.03em;
+  box-shadow: var(--shadow-in-sm);
+}
+.node-badge.wiki-badge { background: var(--bg); color: var(--text-muted); }
+.badge-row { display: flex; align-items: center; gap: 8px; }
+.wiki-link-badge { text-decoration: none; background: var(--teal-soft); color: var(--teal); }
+.sort-badge { background: var(--bg); color: var(--text-muted); }
+
+.node-card-body { font-size: 0.93rem; line-height: 1.68; color: var(--text); }
+.node-card-body p { margin: 0 0 10px; }
+.loading { color: var(--text-muted); font-style: italic; }
+.error-text { color: var(--danger); font-size: 0.88rem; }
+.source-note { font-family: var(--mono); font-size: 0.7rem; color: var(--text-muted); margin-top: 12px; }
+
+/* images carousel */
+.images-carousel {
+  display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.images-carousel::-webkit-scrollbar { height: 6px; }
+.images-carousel::-webkit-scrollbar-thumb { background: var(--shadow-dark); border-radius: 4px; }
+.images-carousel a, .images-carousel .img-frame {
+  flex: 0 0 auto; scroll-snap-align: start;
+  width: 130px; height: 100px; border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-out-sm); overflow: hidden; display: block;
+}
+.images-carousel img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.images-carousel .img-credit-frame {
+  flex: 0 0 auto; width: 130px; height: 100px; display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 0.62rem; color: var(--text-muted); text-align: center; padding: 8px;
+}
+
+/* papers */
+.papers-list { max-height: 440px; overflow-y: auto; padding-right: 4px; }
+.paper-card {
+  padding: 14px 12px; cursor: pointer; border-radius: var(--radius-sm); margin-bottom: 8px;
+  transition: box-shadow 0.12s ease;
+}
+.paper-card:hover { box-shadow: var(--shadow-out-sm); }
+.paper-card.open { box-shadow: var(--shadow-in-sm); }
+.paper-title { font-weight: 700; font-size: 0.95rem; margin: 0 0 4px; color: var(--text); }
+.paper-meta { font-family: var(--mono); font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; margin: 0 0 6px; }
+.paper-abstract { font-size: 0.85rem; color: var(--text-muted); margin: 0 0 4px; }
+.paper-hint { font-family: var(--mono); font-size: 0.65rem; text-transform: uppercase; color: var(--indigo); margin: 0; letter-spacing: 0.03em; }
+
+/* related chips */
+.chips-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  background: var(--bg); color: var(--teal); border: none; box-shadow: var(--shadow-out-sm);
+  font-family: var(--display); font-weight: 600; font-size: 0.83rem;
+  padding: 10px 17px; border-radius: 999px; cursor: pointer;
+}
+.chip:active { box-shadow: var(--shadow-in-sm); }
+.chip-source-note {
+  width: 100%; font-family: var(--mono); font-size: 0.66rem; color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.dossier-footer { margin-top: 26px; }
+
+/* ---------- Drawers ---------- */
+.drawer {
+  position: fixed; top: 0; right: -420px; bottom: 0; width: 400px;
+  background: var(--bg); padding: 28px; z-index: 50; overflow-y: auto;
+  transition: right 0.25s ease; box-shadow: var(--shadow-out);
+}
+.drawer.open { right: 0; }
+.drawer-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 10px; }
+.drawer-head h3 { font-size: 1.15rem; font-weight: 800; margin: 0; }
+.drawer-sub { font-size: 0.83rem; color: var(--text-muted); margin: 4px 0 18px; line-height: 1.5; }
+
+.path-list { list-style: none; margin: 20px 0 0; padding: 0; counter-reset: step; }
+.path-list li { padding: 16px 0 16px 40px; position: relative; }
+.path-list li::before {
+  counter-increment: step; content: counter(step);
+  position: absolute; left: 0; top: 14px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--bg); color: var(--indigo); box-shadow: var(--shadow-out-sm);
+  font-family: var(--mono); font-size: 0.72rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.path-list strong { display: block; font-size: 0.92rem; margin-bottom: 3px; }
+.path-list span { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+
+.drawer-list { list-style: none; margin: 0; padding: 0; }
+.drawer-item {
+  padding: 14px 12px; margin-bottom: 6px; border-radius: var(--radius-sm);
+  cursor: pointer; display: flex; justify-content: space-between; gap: 10px; align-items: baseline;
+}
+.drawer-item:hover { box-shadow: var(--shadow-out-sm); }
+.drawer-item:hover .drawer-item-title { color: var(--indigo); }
+.drawer-item-title { font-weight: 600; font-size: 0.9rem; text-transform: capitalize; }
+.drawer-item-date { font-family: var(--mono); font-size: 0.68rem; color: var(--text-muted); white-space: nowrap; }
+.drawer-empty { color: var(--text-muted); font-size: 0.85rem; font-style: italic; padding: 4px 0; }
+
+/* ---------- Settings modal ---------- */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(20,22,31,0.35);
+  display: flex; align-items: center; justify-content: center; z-index: 60; padding: 20px;
+}
+.modal {
+  background: var(--bg); border-radius: var(--radius); box-shadow: var(--shadow-out);
+  padding: 28px; width: 100%; max-width: 420px; max-height: 88vh; overflow-y: auto;
+}
+.modal-wide { max-width: 580px; }
+.modal-label { display: block; font-size: 0.83rem; font-weight: 600; margin: 18px 0 8px; }
+.modal-input {
+  width: 100%; background: var(--bg); border: none; box-shadow: var(--shadow-in);
+  border-radius: var(--radius-sm); padding: 13px 15px; font-family: var(--mono); font-size: 0.85rem;
+  color: var(--text); margin-bottom: 6px;
+}
+.modal-textarea { font-family: var(--display); min-height: 70px; resize: vertical; margin-top: 10px; }
+.modal-input:disabled { opacity: 0.5; }
+.modal-hint { font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; margin: 10px 0 18px; }
+.modal .btn-primary, .modal .btn-ghost { margin-right: 8px; margin-top: 6px; }
+
+.settings-tabs { display: flex; gap: 8px; margin: 18px 0 6px; }
+.settings-tab {
+  flex: 1; background: var(--bg); border: none; box-shadow: var(--shadow-out-sm);
+  color: var(--text-muted); font-weight: 600; font-size: 0.82rem;
+  padding: 11px; border-radius: var(--radius-sm); cursor: pointer;
+}
+.settings-tab.active { box-shadow: var(--shadow-in-sm); color: var(--indigo); }
+.settings-pane { padding-top: 14px; }
+
+.tone-options { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.tone-chip {
+  background: var(--bg); border: none; box-shadow: var(--shadow-out-sm); color: var(--text);
+  font-size: 0.8rem; font-weight: 600; padding: 9px 14px; border-radius: 999px; cursor: pointer;
+}
+.tone-chip.active { box-shadow: var(--shadow-in-sm); color: var(--indigo); }
+
+.modal-slider {
+  width: 100%; margin: 10px 0 4px; appearance: none; height: 8px; border-radius: 999px;
+  background: var(--bg); box-shadow: var(--shadow-in-sm); outline: none;
+}
+.modal-slider::-webkit-slider-thumb {
+  appearance: none; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--indigo); box-shadow: var(--shadow-out-sm); cursor: pointer;
+}
+.modal-slider::-moz-range-thumb {
+  width: 22px; height: 22px; border-radius: 50%; border: none;
+  background: var(--indigo); box-shadow: var(--shadow-out-sm); cursor: pointer;
+}
+.slider-scale { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.66rem; color: var(--text-muted); margin-bottom: 6px; }
+
+/* connections list */
+.connections-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 6px; }
+.connections-empty { font-size: 0.85rem; color: var(--text-muted); font-style: italic; margin: 6px 0 14px; }
+.connection-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  border-radius: var(--radius-sm); padding: 12px 14px; box-shadow: var(--shadow-in-sm);
+}
+.status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.status-dot.status-ok { background: var(--ok); }
+.status-dot.status-error { background: var(--danger); }
+.status-dot.status-unknown { background: #9aa0b2; }
+.connection-info { flex: 1; min-width: 120px; }
+.connection-name { font-weight: 700; font-size: 0.86rem; margin: 0; }
+.connection-meta { font-family: var(--mono); font-size: 0.68rem; color: var(--text-muted); margin: 2px 0 0; }
+.connection-active {
+  font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px;
+  white-space: nowrap;
+}
+.btn-sm { padding: 7px 11px; font-size: 0.75rem; }
+.icon-btn.btn-sm { width: 28px; height: 28px; }
+.connection-error-note { font-size: 0.75rem; margin: -4px 0 4px; }
+.connection-form { margin-top: 16px; padding-top: 4px; }
+
+.scrim { position: fixed; inset: 0; background: rgba(20,22,31,0.3); z-index: 40; }
+
+/* ---------- Mind Map overlay ---------- */
+.map-overlay {
+  position: fixed; inset: 0; background: var(--bg); z-index: 70;
+  display: flex; flex-direction: column;
+}
+.map-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 20px 28px; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+.map-head h3 { font-size: 1.2rem; font-weight: 800; margin: 0; }
+.map-head-actions { display: flex; align-items: center; gap: 10px; }
+.map-canvas-wrap { flex: 1; position: relative; }
+#mapSvg { width: 100%; height: 100%; display: block; }
+.map-empty {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  color: var(--text-muted); font-size: 0.95rem; text-align: center;
+}
+.map-node text { user-select: none; }
+.cluster-label { user-select: none; }
+
+/* ---------- Paper insight bottom sheet ---------- */
+.insight-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
+  max-height: 46vh;
+  background: var(--bg); border-radius: 24px 24px 0 0; box-shadow: var(--shadow-out);
+  display: flex; flex-direction: column;
+  animation: sheet-up 0.2s ease;
+}
+@keyframes sheet-up {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.insight-sheet-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 18px 24px 10px;
+}
+.insight-sheet-title { font-weight: 800; font-size: 1rem; margin: 0; max-width: 640px; }
+.insight-sheet-body {
+  padding: 14px 24px; overflow-y: auto; font-size: 0.9rem; line-height: 1.6; color: var(--text);
+}
+.insight-sheet-body p { margin: 0 0 10px; }
+.insight-sheet-body ul { margin: 0 0 10px; padding-left: 20px; }
+.insight-sheet-body li { margin-bottom: 4px; }
+.insight-sheet-footer { padding: 12px 24px 20px; }
+
+[hidden] { display: none !important; }
+
+/* =========================================================
+   Responsive: tablet + desktop scaling, mobile full-bleed UI
+   ========================================================= */
+
+/* Large monitors — a bit more breathing room */
+@media (min-width: 1440px) {
+  .stage, .topbar-inner { max-width: 1320px; }
+  .hero { max-width: 700px; padding-top: 100px; }
+  .hero-title { font-size: 2.6rem; }
+  .dossier-grid { grid-template-columns: 1.4fr 1fr; gap: 26px; }
+}
+
+/* Tablet */
+@media (max-width: 900px) {
+  .dossier-grid { grid-template-columns: 1fr; }
+  .stage { padding: 0 22px 90px; }
+}
+
+/* Phone */
+@media (max-width: 640px) {
+  .stage { padding: 0 16px 90px; }
+  .topbar-inner { padding: 0 16px; }
+  .hero { padding: 46px 0 30px; }
+  .hero-title { font-size: 1.7rem; margin-bottom: 24px; }
+  .graph-svg { width: 170px; height: 88px; }
+  .hero-form { flex-direction: column; }
+  #topicInput { width: 100%; }
+  .btn-primary { width: 100%; }
+
+  .hide-narrow { display: none; }
+  .topbar-actions { gap: 6px; }
+  .pill-btn { padding: 9px 12px; font-size: 0.76rem; }
+
+  .drawer { width: 100vw; right: -100vw; padding: 22px 18px; border-radius: 0; }
+  .node-card { padding: 20px 18px; }
+  #dossierTitle { font-size: 1.5rem; }
+
+  .modal { padding: 22px 18px; max-height: 92vh; }
+  .map-head { padding: 16px; }
+  .insight-sheet { max-height: 62vh; }
+  .insight-sheet-head, .insight-sheet-body, .insight-sheet-footer { padding-left: 18px; padding-right: 18px; }
+
+  .images-carousel a, .images-carousel .img-frame, .images-carousel .img-credit-frame { width: 108px; height: 84px; }
+}
+
+/* Very small phones */
+@media (max-width: 380px) {
+  .topbar-actions .pill-btn span { display: none; }
+}
+
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-node"><span class="dot dot-a"></span><span class="edge"></span><span class="dot dot-b"></span></span>
+      <span class="brand-name">Dive In</span>
+    </div>
+    <div class="topbar-actions">
+      <button id="themeToggle" class="icon-btn" title="Toggle dark mode" aria-label="Toggle dark mode">
+        <svg id="themeIconSun" width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.5v2.5M12 19v2.5M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2.5 12H5M19 12h2.5M4.2 19.8L6 18M18 6l1.8-1.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <svg id="themeIconMoon" width="17" height="17" viewBox="0 0 24 24" fill="none" hidden><path d="M20 14.5A8.5 8.5 0 119.5 4a7 7 0 1010.5 10.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </button>
+      <button id="mapToggle" class="pill-btn">Mind Map</button>
+      <button id="pathToggle" class="pill-btn hide-narrow">The Path</button>
+      <button id="historyToggle" class="pill-btn">Catalogue <span id="historyCount">0</span></button>
+      <button id="settingsToggle" class="icon-btn" title="Settings" aria-label="Settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 13a7.97 7.97 0 000-2l2.1-1.6-2-3.4-2.5 1a8 8 0 00-1.7-1L14.9 3h-4l-.4 2.9a8 8 0 00-1.7 1l-2.5-1-2 3.4L6.4 11a8 8 0 000 2l-2.1 1.6 2 3.4 2.5-1a8 8 0 001.7 1L10.9 21h4l.4-2.9a8 8 0 001.7-1l2.5 1 2-3.4L19.4 13z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        <span id="gearStatusDot" class="gear-status-dot status-unknown" title="AI connection status"></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="stage">
+
+  <section class="hero" id="hero">
+    <div class="hero-graphic" aria-hidden="true">
+      <svg viewBox="0 0 400 200" class="graph-svg">
+        <line x1="200" y1="100" x2="80" y2="40" class="graph-edge"/>
+        <line x1="200" y1="100" x2="320" y2="35" class="graph-edge"/>
+        <line x1="200" y1="100" x2="60" y2="150" class="graph-edge"/>
+        <line x1="200" y1="100" x2="330" y2="150" class="graph-edge"/>
+        <line x1="200" y1="100" x2="200" y2="180" class="graph-edge"/>
+        <circle cx="200" cy="100" r="10" class="graph-node graph-node-center"/>
+        <circle cx="80" cy="40" r="5" class="graph-node"/>
+        <circle cx="320" cy="35" r="5" class="graph-node"/>
+        <circle cx="60" cy="150" r="5" class="graph-node"/>
+        <circle cx="330" cy="150" r="5" class="graph-node"/>
+        <circle cx="200" cy="180" r="5" class="graph-node"/>
+      </svg>
+    </div>
+    <p class="eyebrow">a research map for anything you're curious about</p>
+    <h1 class="hero-title">What are you diving into today?</h1>
+    <form id="topicForm" class="hero-form">
+      <input type="text" id="topicInput" placeholder="maritime law, CRISPR, behavioral economics, thermodynamics…" autocomplete="off">
+      <button type="submit" class="btn-primary">Dive in</button>
+    </form>
+    <div id="suggestionList" class="suggestion-list" hidden></div>
+
+    <div class="surprise-wrap" id="surpriseWrap">
+      <button type="button" id="randomBtn" class="link-btn">or let me pick — surprise me</button>
+      <div class="surprise-popover" id="surprisePopover" hidden>
+        <p class="surprise-popover-label">Pick one, or click "surprise me" for fully random</p>
+        <div class="surprise-chips" id="surpriseChips"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="dossier" id="dossier" hidden>
+
+    <div class="dossier-head">
+      <div>
+        <p class="field-tag" id="dossierField">—</p>
+        <h2 id="dossierTitle">—</h2>
+      </div>
+      <button id="newTopicBtn" class="btn-ghost">New topic</button>
+    </div>
+
+    <div class="dossier-grid">
+
+      <article class="node-card node-card-summary">
+        <div class="node-card-head">
+          <h3 id="summaryHeading">AI Summary</h3>
+          <div class="badge-row">
+            <span class="node-badge" id="summaryBadge">wiki</span>
+            <a id="wikiLink" class="node-badge wiki-link-badge" href="#" target="_blank" rel="noopener" hidden>Wikipedia ↗</a>
+          </div>
+        </div>
+        <div id="primerBody" class="node-card-body">
+          <p class="loading">Thinking…</p>
+        </div>
+      </article>
+
+      <article class="node-card node-card-images">
+        <div class="node-card-head"><h3>Visuals</h3></div>
+        <div id="imagesBody" class="images-carousel">
+          <p class="loading">Fetching images…</p>
+        </div>
+      </article>
+
+      <article class="node-card node-card-papers">
+        <div class="node-card-head">
+          <h3>Primary Sources</h3>
+          <span class="node-badge sort-badge">sorted by citations</span>
+        </div>
+        <div id="papersBody" class="node-card-body papers-list">
+          <p class="loading">Querying CrossRef and Semantic Scholar…</p>
+        </div>
+      </article>
+
+      <article class="node-card node-card-related">
+        <div class="node-card-head"><h3>Explore Next</h3></div>
+        <div id="relatedBody" class="chips-row">
+          <p class="loading">Finding what to learn next…</p>
+        </div>
+      </article>
+
+    </div>
+
+    <div class="dossier-footer">
+      <button id="markReadBtn" class="btn-primary">Catalogue this session</button>
+    </div>
+
+  </section>
+
+</main>
+
+<!-- Path to Depth slide-over -->
+<aside class="drawer" id="pathDrawer">
+  <div class="drawer-head">
+    <h3>The Path to Depth</h3>
+    <button id="closePathDrawer" class="icon-btn" aria-label="Close">✕</button>
+  </div>
+  <ol class="path-list">
+    <li><strong>Map the terrain.</strong><span>Skim 3–5 foundational sources. Don't study yet — just build an index of what exists.</span></li>
+    <li><strong>Find the 20% that repeats.</strong><span>Every niche has recurring problems. Watch the summary and papers for the same 2–3 tensions showing up again and again.</span></li>
+    <li><strong>Read the primary sources, not summaries.</strong><span>Use the papers panel. Pick one paper you understand end to end before moving to the next.</span></li>
+    <li><strong>Find who's active now.</strong><span>Not just canonical authors — who's publishing in the last 2 years. Follow their citation trail.</span></li>
+    <li><strong>Write one page in your own words.</strong><span>Explaining it to someone else is the fastest way to expose what you don't actually understand.</span></li>
+  </ol>
+</aside>
+
+<!-- Catalogue slide-over -->
+<aside class="drawer" id="historyDrawer">
+  <div class="drawer-head">
+    <h3>The Catalogue</h3>
+    <button id="closeHistoryDrawer" class="icon-btn" aria-label="Close">✕</button>
+  </div>
+  <p class="drawer-sub">Every topic you've opened a map for.</p>
+  <ul id="historyList" class="drawer-list"></ul>
+</aside>
+
+<!-- Settings modal -->
+<div class="modal-overlay" id="settingsOverlay" hidden>
+  <div class="modal modal-wide">
+    <div class="drawer-head">
+      <h3>Settings</h3>
+      <button id="closeSettings" class="icon-btn" aria-label="Close">✕</button>
+    </div>
+
+    <div class="settings-tabs">
+      <button class="settings-tab active" data-tab="connections">AI Connections</button>
+      <button class="settings-tab" data-tab="tuning">Tone &amp; Expertise</button>
+    </div>
+
+    <div class="settings-pane" id="paneConnections">
+      <p class="drawer-sub">
+        Add one or more providers. The one marked "active" powers AI Summary and
+        paper insights. Nothing here leaves your browser except direct calls to
+        the provider you choose.
+      </p>
+
+      <div id="connectionsList" class="connections-list"></div>
+
+      <div class="connection-form">
+        <label class="modal-label" for="newProviderType">Add a connection</label>
+        <select id="newProviderType" class="modal-input">
+          <option value="gemini">Google AI Studio (Gemini) — free</option>
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="openai-compatible">Other (OpenAI-compatible) — Groq, OpenRouter, etc.</option>
+        </select>
+
+        <input type="text" id="newBaseUrl" class="modal-input" placeholder="Base URL, e.g. https://api.groq.com/openai/v1" hidden>
+        <input type="password" id="newApiKey" class="modal-input" placeholder="API key">
+        <input type="text" id="newModel" class="modal-input" placeholder="model name">
+        <input type="text" id="newNickname" class="modal-input" placeholder="Nickname (optional)">
+
+        <p class="modal-hint" id="newProviderHint"></p>
+        <button id="addConnectionBtn" class="btn-primary">Add connection</button>
+      </div>
+    </div>
+
+    <div class="settings-pane" id="paneTuning" hidden>
+      <p class="drawer-sub">Shapes every AI Summary and paper insight from here on.</p>
+
+      <label class="modal-label">Tone</label>
+      <div class="tone-options" id="toneOptions">
+        <button type="button" class="tone-chip active" data-tone="direct">Direct &amp; Analytical</button>
+        <button type="button" class="tone-chip" data-tone="friendly">Friendly Mentor</button>
+        <button type="button" class="tone-chip" data-tone="academic">Academic &amp; Formal</button>
+        <button type="button" class="tone-chip" data-tone="custom">Custom…</button>
+      </div>
+      <textarea id="customToneInput" class="modal-input modal-textarea" placeholder="Describe the tone you want, e.g. 'witty but precise, short sentences, the occasional dry joke'" hidden></textarea>
+
+      <label class="modal-label" for="expertiseSlider">
+        Expertise level — <span id="expertiseLabel">Intermediate</span>
+      </label>
+      <input type="range" id="expertiseSlider" class="modal-slider" min="1" max="5" value="3" step="1">
+      <div class="slider-scale"><span>Beginner</span><span>Expert</span></div>
+      <p class="modal-hint">
+        Beginner: simple language, analogies, worked examples. Expert: precise
+        technical vocabulary, dense insight, no hand-holding.
+      </p>
+
+      <button id="saveTuning" class="btn-primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+
+<!-- Mind Map overlay -->
+<div class="map-overlay" id="mapOverlay" hidden>
+  <div class="map-head">
+    <div>
+      <h3>Mind Map</h3>
+      <p class="drawer-sub">Teal = explored. Indigo = suggested. Blobs are learning clusters — double-click a label to rename it.</p>
+    </div>
+    <div class="map-head-actions">
+      <button id="clearMapBtn" class="btn-ghost">Clear map</button>
+      <button id="closeMapBtn" class="icon-btn" aria-label="Close">✕</button>
+    </div>
+  </div>
+  <div class="map-canvas-wrap">
+    <svg id="mapSvg"></svg>
+    <p id="mapEmpty" class="map-empty" hidden>Open a topic to start building your map.</p>
+  </div>
+</div>
+
+<!-- Paper insight bottom sheet -->
+<div class="insight-sheet" id="insightSheet" hidden>
+  <div class="insight-sheet-head">
+    <p class="insight-sheet-title" id="insightTitle">—</p>
+    <button id="closeInsightSheet" class="icon-btn" aria-label="Close">✕</button>
+  </div>
+  <div class="insight-sheet-body" id="insightBody">
+    <p class="loading">Generating insights…</p>
+  </div>
+  <div class="insight-sheet-footer">
+    <a id="insightOpenPaper" href="#" target="_blank" rel="noopener" class="btn-primary">Open paper ↗</a>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+// A shelf of topics spanning many disciplines, for the "Surprise me" picker.
+// Each entry: { topic, field }
+const TOPIC_SHELF = [
+  // Law
+  { topic: "maritime law", field: "law" },
+  { topic: "antitrust law", field: "law" },
+  { topic: "international arbitration", field: "law" },
+  { topic: "constitutional originalism", field: "law" },
+  { topic: "intellectual property law", field: "law" },
+  { topic: "space law", field: "law" },
+  { topic: "administrative law", field: "law" },
+  { topic: "conflict of laws", field: "law" },
+  { topic: "data protection law", field: "law" },
+  { topic: "criminal sentencing theory", field: "law" },
+
+  // Economics
+  { topic: "behavioral economics", field: "economics" },
+  { topic: "monetary policy", field: "economics" },
+  { topic: "game theory", field: "economics" },
+  { topic: "development economics", field: "economics" },
+  { topic: "mechanism design", field: "economics" },
+  { topic: "labor economics", field: "economics" },
+  { topic: "auction theory", field: "economics" },
+  { topic: "public choice theory", field: "economics" },
+  { topic: "trade economics", field: "economics" },
+  { topic: "financial market microstructure", field: "economics" },
+
+  // Physics
+  { topic: "quantum entanglement", field: "physics" },
+  { topic: "thermodynamics", field: "physics" },
+  { topic: "condensed matter physics", field: "physics" },
+  { topic: "general relativity", field: "physics" },
+  { topic: "plasma physics", field: "physics" },
+  { topic: "particle physics", field: "physics" },
+  { topic: "fluid dynamics", field: "physics" },
+  { topic: "quantum computing", field: "physics" },
+  { topic: "astrophysics of black holes", field: "physics" },
+  { topic: "statistical mechanics", field: "physics" },
+
+  // Biology
+  { topic: "CRISPR gene editing", field: "biology" },
+  { topic: "synthetic biology", field: "biology" },
+  { topic: "evolutionary developmental biology", field: "biology" },
+  { topic: "microbiome science", field: "biology" },
+  { topic: "epigenetics", field: "biology" },
+  { topic: "neurobiology of sleep", field: "biology" },
+  { topic: "cancer immunotherapy", field: "biology" },
+  { topic: "protein folding", field: "biology" },
+  { topic: "conservation genetics", field: "biology" },
+  { topic: "virology", field: "biology" },
+
+  // Philosophy
+  { topic: "philosophy of mind", field: "philosophy" },
+  { topic: "epistemology", field: "philosophy" },
+  { topic: "moral relativism", field: "philosophy" },
+  { topic: "philosophy of science", field: "philosophy" },
+  { topic: "existentialism", field: "philosophy" },
+  { topic: "philosophy of language", field: "philosophy" },
+  { topic: "ethics of artificial intelligence", field: "philosophy" },
+  { topic: "free will and determinism", field: "philosophy" },
+  { topic: "political philosophy of justice", field: "philosophy" },
+  { topic: "phenomenology", field: "philosophy" },
+
+  // Engineering
+  { topic: "digital twin technology", field: "engineering" },
+  { topic: "control systems theory", field: "engineering" },
+  { topic: "additive manufacturing", field: "engineering" },
+  { topic: "structural fatigue analysis", field: "engineering" },
+  { topic: "robotics kinematics", field: "engineering" },
+  { topic: "battery electrochemistry", field: "engineering" },
+  { topic: "computational fluid dynamics", field: "engineering" },
+  { topic: "systems engineering", field: "engineering" },
+  { topic: "industrial automation", field: "engineering" },
+  { topic: "materials science of composites", field: "engineering" },
+
+  // Computer Science
+  { topic: "distributed systems", field: "computer science" },
+  { topic: "cryptography", field: "computer science" },
+  { topic: "large language models", field: "computer science" },
+  { topic: "computer vision", field: "computer science" },
+  { topic: "compiler design", field: "computer science" },
+  { topic: "database internals", field: "computer science" },
+  { topic: "reinforcement learning", field: "computer science" },
+  { topic: "computational complexity theory", field: "computer science" },
+  { topic: "network security", field: "computer science" },
+  { topic: "formal verification", field: "computer science" },
+
+  // History
+  { topic: "the Byzantine Empire", field: "history" },
+  { topic: "the Mongol conquests", field: "history" },
+  { topic: "the Cold War", field: "history" },
+  { topic: "the Industrial Revolution", field: "history" },
+  { topic: "the Silk Road", field: "history" },
+  { topic: "the fall of the Roman Republic", field: "history" },
+  { topic: "the Indian independence movement", field: "history" },
+  { topic: "the history of navigation", field: "history" },
+  { topic: "the Ottoman Empire", field: "history" },
+  { topic: "the history of cartography", field: "history" },
+
+  // Psychology
+  { topic: "cognitive biases", field: "psychology" },
+  { topic: "attachment theory", field: "psychology" },
+  { topic: "the psychology of habit formation", field: "psychology" },
+  { topic: "personality psychology", field: "psychology" },
+  { topic: "decision fatigue", field: "psychology" },
+  { topic: "the psychology of motivation", field: "psychology" },
+  { topic: "cognitive load theory", field: "psychology" },
+  { topic: "the psychology of persuasion", field: "psychology" },
+  { topic: "developmental psychology", field: "psychology" },
+  { topic: "the psychology of flow states", field: "psychology" },
+
+  // Linguistics
+  { topic: "historical linguistics", field: "linguistics" },
+  { topic: "computational linguistics", field: "linguistics" },
+  { topic: "language acquisition", field: "linguistics" },
+  { topic: "sociolinguistics", field: "linguistics" },
+  { topic: "phonetics and phonology", field: "linguistics" },
+  { topic: "semantics and pragmatics", field: "linguistics" },
+  { topic: "language death and revitalization", field: "linguistics" },
+  { topic: "syntax theory", field: "linguistics" },
+
+  // Medicine
+  { topic: "immunology", field: "medicine" },
+  { topic: "epidemiology", field: "medicine" },
+  { topic: "pharmacokinetics", field: "medicine" },
+  { topic: "neurodegenerative disease", field: "medicine" },
+  { topic: "regenerative medicine", field: "medicine" },
+  { topic: "medical imaging", field: "medicine" },
+  { topic: "endocrinology", field: "medicine" },
+  { topic: "public health policy", field: "medicine" },
+
+  // Chemistry
+  { topic: "catalysis", field: "chemistry" },
+  { topic: "organic synthesis", field: "chemistry" },
+  { topic: "electrochemistry", field: "chemistry" },
+  { topic: "polymer chemistry", field: "chemistry" },
+  { topic: "photochemistry", field: "chemistry" },
+  { topic: "green chemistry", field: "chemistry" },
+
+  // Mathematics
+  { topic: "number theory", field: "mathematics" },
+  { topic: "topology", field: "mathematics" },
+  { topic: "graph theory", field: "mathematics" },
+  { topic: "probability theory", field: "mathematics" },
+  { topic: "differential geometry", field: "mathematics" },
+  { topic: "chaos theory", field: "mathematics" },
+  { topic: "optimization theory", field: "mathematics" },
+
+  // Political Science
+  { topic: "geopolitics of energy", field: "political science" },
+  { topic: "electoral systems design", field: "political science" },
+  { topic: "international relations realism", field: "political science" },
+  { topic: "authoritarian regime survival", field: "political science" },
+  { topic: "nuclear deterrence theory", field: "political science" },
+  { topic: "the politics of trade sanctions", field: "political science" },
+
+  // Art & Design
+  { topic: "the history of typography", field: "art and design" },
+  { topic: "Bauhaus design principles", field: "art and design" },
+  { topic: "color theory", field: "art and design" },
+  { topic: "architectural structural design", field: "art and design" },
+  { topic: "industrial design history", field: "art and design" },
+
+  // Anthropology / Sociology
+  { topic: "cultural anthropology", field: "anthropology" },
+  { topic: "the sociology of networks", field: "sociology" },
+  { topic: "urban sociology", field: "sociology" },
+  { topic: "kinship systems", field: "anthropology" },
+
+  // Environmental Science / Astronomy
+  { topic: "climate feedback loops", field: "environmental science" },
+  { topic: "ocean acidification", field: "environmental science" },
+  { topic: "exoplanet detection", field: "astronomy" },
+  { topic: "stellar nucleosynthesis", field: "astronomy" },
+  { topic: "biodiversity loss", field: "environmental science" },
+
+  // Neuroscience
+  { topic: "the neuroscience of memory", field: "neuroscience" },
+  { topic: "computational neuroscience", field: "neuroscience" },
+  { topic: "the neuroscience of decision-making", field: "neuroscience" },
+  { topic: "neuroplasticity", field: "neuroscience" },
+];
+
+function pickRandomTopic() {
+  const i = Math.floor(Math.random() * TOPIC_SHELF.length);
+  return TOPIC_SHELF[i];
+}
+
+function fieldForTopic(topicText) {
+  const hit = TOPIC_SHELF.find(
+    (t) => t.topic.toLowerCase() === topicText.trim().toLowerCase()
+  );
+  return hit ? hit.field : "general";
+}
+
+</script>
+<script>
+// ---------- AI Connections: pluggable multi-provider manager ----------
+// Supports Anthropic, Google AI Studio (Gemini), and any OpenAI-compatible
+// endpoint (Groq, OpenRouter, Together, Mistral, DeepSeek, local Ollama/LM
+// Studio, etc.) — the last one is what makes this scale to "any provider"
+// without needing bespoke code per service.
+(function () {
+  const STORAGE = "nodeway.connections";
+  const ACTIVE_STORAGE = "nodeway.activeConnectionId";
+
+  const PROVIDER_META = {
+    gemini: {
+      label: "Google AI Studio (Gemini)",
+      defaultModel: "gemini-2.5-flash",
+      needsBaseUrl: false,
+      help: "Free key at aistudio.google.com/apikey. Generous free tier, good default choice.",
+    },
+    anthropic: {
+      label: "Anthropic (Claude)",
+      defaultModel: "claude-haiku-4-5-20251001",
+      needsBaseUrl: false,
+      help: "Key at console.anthropic.com. Pay-as-you-go, pennies per call on Haiku.",
+    },
+    "openai-compatible": {
+      label: "OpenAI-compatible",
+      defaultModel: "",
+      needsBaseUrl: true,
+      help: "Works with any provider implementing the OpenAI chat/completions format. Free options: Groq (console.groq.com — fast, generous free tier, e.g. model \"llama-3.3-70b-versatile\"), OpenRouter (openrouter.ai — has free models, e.g. \"meta-llama/llama-3.3-70b-instruct:free\").",
+    },
+  };
+
+  // ---------- storage ----------
+  function uid() {
+    return "c_" + Math.random().toString(36).slice(2, 10);
+  }
+  function getConnections() {
+    try {
+      const list = JSON.parse(localStorage.getItem(STORAGE));
+      if (Array.isArray(list)) return list;
+    } catch {}
+    return [];
+  }
+  function saveConnections(list) {
+    localStorage.setItem(STORAGE, JSON.stringify(list));
+  }
+  function getActiveId() {
+    return localStorage.getItem(ACTIVE_STORAGE) || "";
+  }
+  function setActiveId(id) {
+    localStorage.setItem(ACTIVE_STORAGE, id);
+    updateGearDot();
+  }
+  function getActiveConnection() {
+    return getConnections().find((c) => c.id === getActiveId()) || null;
+  }
+
+  function addConnection({ provider, nickname, apiKey, model, baseUrl }) {
+    const meta = PROVIDER_META[provider];
+    const list = getConnections();
+    const conn = {
+      id: uid(),
+      provider,
+      nickname: (nickname || "").trim() || meta.label,
+      apiKey: (apiKey || "").trim(),
+      model: (model || "").trim() || meta.defaultModel,
+      baseUrl: (baseUrl || "").trim().replace(/\/$/, ""),
+      status: "unknown",
+      lastTestedAt: null,
+    };
+    list.push(conn);
+    saveConnections(list);
+    if (!getActiveId()) setActiveId(conn.id);
+    return conn;
+  }
+
+  function removeConnection(id) {
+    const list = getConnections().filter((c) => c.id !== id);
+    saveConnections(list);
+    if (getActiveId() === id) setActiveId(list[0]?.id || "");
+    updateGearDot();
+  }
+
+  function updateConnection(id, patch) {
+    const list = getConnections();
+    const idx = list.findIndex((c) => c.id === id);
+    if (idx === -1) return;
+    list[idx] = { ...list[idx], ...patch };
+    saveConnections(list);
+  }
+
+  // ---------- provider adapters ----------
+  async function callAnthropic(conn, prompt) {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": conn.apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+      },
+      body: JSON.stringify({
+        model: conn.model,
+        max_tokens: 500,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (!res.ok) throw new Error("anthropic http " + res.status);
+    const data = await res.json();
+    return (data.content || [])
+      .filter((b) => b.type === "text")
+      .map((b) => b.text)
+      .join("\n\n");
+  }
+
+  async function callGemini(conn, prompt) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(conn.model)}:generateContent`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": conn.apiKey },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      }
+    );
+    if (!res.ok) throw new Error("gemini http " + res.status);
+    const data = await res.json();
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    return parts.map((p) => p.text || "").join("\n\n");
+  }
+
+  async function callOpenAiCompatible(conn, prompt) {
+    if (!conn.baseUrl) throw new Error("missing base url");
+    // tolerate someone pasting the full endpoint (e.g. ".../v1/chat/completions")
+    // instead of just the base (e.g. ".../v1") — strip it back down to the base.
+    const cleanBase = conn.baseUrl.replace(/\/?(chat\/completions)\/?$/, "").replace(/\/$/, "");
+    const res = await fetch(`${cleanBase}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${conn.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: conn.model,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (!res.ok) {
+      const bodyText = await res.text().catch(() => "");
+      throw new Error("openai-compatible http " + res.status + (bodyText ? " — " + bodyText.slice(0, 200) : ""));
+    }
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || "";
+  }
+
+  async function call(conn, prompt) {
+    if (conn.provider === "anthropic") return callAnthropic(conn, prompt);
+    if (conn.provider === "gemini") return callGemini(conn, prompt);
+    if (conn.provider === "openai-compatible") return callOpenAiCompatible(conn, prompt);
+    throw new Error("unknown provider " + conn.provider);
+  }
+
+  async function callActive(prompt) {
+    const conn = getActiveConnection();
+    if (!conn || !conn.apiKey) return null;
+    return call(conn, prompt);
+  }
+
+  async function testConnection(id) {
+    const conn = getConnections().find((c) => c.id === id);
+    if (!conn) return "error";
+    let status = "error";
+    let errorMessage = "";
+    try {
+      const text = await call(conn, "Reply with exactly one word: OK");
+      status = text && text.trim().length > 0 ? "ok" : "error";
+      if (status === "error") errorMessage = "Got an empty response back.";
+    } catch (err) {
+      status = "error";
+      errorMessage = err.message || String(err);
+      if (/failed to fetch/i.test(errorMessage)) {
+        errorMessage += " — this usually means the request was blocked before reaching the server (CORS or a network/ad-blocker issue), not a bad key or model.";
+      }
+    }
+    updateConnection(id, { status, lastTestedAt: Date.now(), lastError: errorMessage });
+    updateGearDot();
+    return status;
+  }
+
+  // ---------- gear icon status dot ----------
+  function updateGearDot() {
+    const dot = document.getElementById("gearStatusDot");
+    if (!dot) return;
+    const conn = getActiveConnection();
+    dot.classList.remove("status-ok", "status-error", "status-unknown");
+    if (!conn) {
+      dot.classList.add("status-unknown");
+      dot.title = "No AI connection set up";
+    } else if (conn.status === "ok") {
+      dot.classList.add("status-ok");
+      dot.title = `Connected — ${conn.nickname}`;
+    } else if (conn.status === "error") {
+      dot.classList.add("status-error");
+      dot.title = `${conn.nickname} — last test failed`;
+    } else {
+      dot.classList.add("status-unknown");
+      dot.title = `${conn.nickname} — not tested yet`;
+    }
+  }
+
+  // ---------- settings modal UI ----------
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function renderConnectionsList() {
+    const list = getConnections();
+    const activeId = getActiveId();
+    const el = document.getElementById("connectionsList");
+    if (!el) return;
+    if (list.length === 0) {
+      el.innerHTML = `<p class="connections-empty">No connections yet — add one below. Gemini's free tier is the easiest place to start.</p>`;
+      return;
+    }
+    el.innerHTML = list
+      .map((c) => {
+        const meta = PROVIDER_META[c.provider] || {};
+        const isActive = c.id === activeId;
+        return `
+        <div class="connection-row" data-id="${c.id}">
+          <span class="status-dot status-${c.status}" title="${escapeHtml(c.status)}"></span>
+          <div class="connection-info">
+            <p class="connection-name">${escapeHtml(c.nickname)}</p>
+            <p class="connection-meta">${escapeHtml(meta.label || c.provider)} · ${escapeHtml(c.model || "—")}</p>
+          </div>
+          <label class="connection-active">
+            <input type="radio" name="activeConn" value="${c.id}" ${isActive ? "checked" : ""}> active
+          </label>
+          <button class="btn-ghost btn-sm test-btn" data-id="${c.id}">Test</button>
+          <button class="icon-btn btn-sm remove-btn" data-id="${c.id}" aria-label="Remove" title="Remove">✕</button>
+        </div>`;
+      })
+      .join("");
+  }
+
+  function wireConnectionsListEvents() {
+    const el = document.getElementById("connectionsList");
+    el.addEventListener("click", async (e) => {
+      const testBtn = e.target.closest(".test-btn");
+      const removeBtn = e.target.closest(".remove-btn");
+      if (testBtn) {
+        const id = testBtn.dataset.id;
+        testBtn.textContent = "Testing…";
+        testBtn.disabled = true;
+        const status = await testConnection(id);
+        renderConnectionsList();
+        updateGearDot();
+        if (status === "error") {
+          const row = el.querySelector(`.connection-row[data-id="${id}"]`);
+          if (row) {
+            const conn = getConnections().find((c) => c.id === id);
+            const note = document.createElement("p");
+            note.className = "error-text connection-error-note";
+            note.textContent = conn?.lastError
+              ? `Couldn't connect — ${conn.lastError}`
+              : "Couldn't connect — check the API key, model name, and (for OpenAI-compatible) the base URL.";
+            row.after(note);
+          }
+        }
+      } else if (removeBtn) {
+        removeConnection(removeBtn.dataset.id);
+        renderConnectionsList();
+      }
+    });
+    el.addEventListener("change", (e) => {
+      if (e.target.name === "activeConn") {
+        setActiveId(e.target.value);
+        renderConnectionsList();
+      }
+    });
+  }
+
+  function wireAddForm() {
+    const providerType = document.getElementById("newProviderType");
+    const baseUrl = document.getElementById("newBaseUrl");
+    const apiKey = document.getElementById("newApiKey");
+    const model = document.getElementById("newModel");
+    const nickname = document.getElementById("newNickname");
+    const hint = document.getElementById("newProviderHint");
+    const addBtn = document.getElementById("addConnectionBtn");
+
+    function refresh() {
+      const meta = PROVIDER_META[providerType.value];
+      baseUrl.hidden = !meta.needsBaseUrl;
+      model.placeholder = meta.defaultModel ? `model name (default: ${meta.defaultModel})` : "model name";
+      hint.textContent = meta.help;
+    }
+    providerType.addEventListener("change", refresh);
+    refresh();
+
+    addBtn.addEventListener("click", () => {
+      if (!apiKey.value.trim()) {
+        apiKey.focus();
+        return;
+      }
+      addConnection({
+        provider: providerType.value,
+        nickname: nickname.value,
+        apiKey: apiKey.value,
+        model: model.value,
+        baseUrl: baseUrl.value,
+      });
+      apiKey.value = "";
+      model.value = "";
+      nickname.value = "";
+      renderConnectionsList();
+      updateGearDot();
+    });
+  }
+
+  function initSettingsUI() {
+    const settingsToggle = document.getElementById("settingsToggle");
+    const settingsOverlay = document.getElementById("settingsOverlay");
+    const closeSettings = document.getElementById("closeSettings");
+
+    settingsToggle.addEventListener("click", () => {
+      renderConnectionsList();
+      settingsOverlay.hidden = false;
+    });
+    closeSettings.addEventListener("click", () => (settingsOverlay.hidden = true));
+    settingsOverlay.addEventListener("click", (e) => {
+      if (e.target === settingsOverlay) settingsOverlay.hidden = true;
+    });
+
+    wireConnectionsListEvents();
+    wireAddForm();
+    updateGearDot();
+  }
+
+  document.addEventListener("DOMContentLoaded", initSettingsUI);
+  // in case this script runs after DOMContentLoaded already fired
+  if (document.readyState !== "loading") initSettingsUI();
+
+  window.NodewayAI = {
+    PROVIDER_META,
+    getConnections,
+    addConnection,
+    removeConnection,
+    updateConnection,
+    getActiveId,
+    setActiveId,
+    getActiveConnection,
+    callActive,
+    testConnection,
+    call,
+    updateGearDot,
+  };
+})();
+
+</script>
+<script>
+// ---------- State ----------
+let currentTopic = null;
+let currentField = "general";
+let currentPapers = [];
+let openInsightIdx = null;
+
+// ---------- DOM refs ----------
+const heroSection = document.getElementById("hero");
+const dossierSection = document.getElementById("dossier");
+const topicForm = document.getElementById("topicForm");
+const topicInput = document.getElementById("topicInput");
+const randomBtn = document.getElementById("randomBtn");
+const suggestionList = document.getElementById("suggestionList");
+const surpriseWrap = document.getElementById("surpriseWrap");
+const surprisePopover = document.getElementById("surprisePopover");
+const surpriseChips = document.getElementById("surpriseChips");
+
+const dossierField = document.getElementById("dossierField");
+const dossierTitle = document.getElementById("dossierTitle");
+const newTopicBtn = document.getElementById("newTopicBtn");
+
+const summaryHeading = document.getElementById("summaryHeading");
+const summaryBadge = document.getElementById("summaryBadge");
+const wikiLink = document.getElementById("wikiLink");
+const primerBody = document.getElementById("primerBody");
+const imagesBody = document.getElementById("imagesBody");
+const papersBody = document.getElementById("papersBody");
+const relatedBody = document.getElementById("relatedBody");
+const markReadBtn = document.getElementById("markReadBtn");
+
+const pathToggle = document.getElementById("pathToggle");
+const pathDrawer = document.getElementById("pathDrawer");
+const closePathDrawer = document.getElementById("closePathDrawer");
+
+const historyToggle = document.getElementById("historyToggle");
+const historyDrawer = document.getElementById("historyDrawer");
+const closeHistoryDrawer = document.getElementById("closeHistoryDrawer");
+const historyCount = document.getElementById("historyCount");
+const historyList = document.getElementById("historyList");
+
+const scrim = document.getElementById("scrim");
+
+const insightSheet = document.getElementById("insightSheet");
+const insightTitle = document.getElementById("insightTitle");
+const insightBody = document.getElementById("insightBody");
+const insightOpenPaper = document.getElementById("insightOpenPaper");
+const closeInsightSheet = document.getElementById("closeInsightSheet");
+
+// ---------- Utilities ----------
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+function truncate(str, n) {
+  if (!str) return "";
+  return str.length > n ? str.slice(0, n).trim() + "…" : str;
+}
+
+// ---------- Dark mode ----------
+const THEME_STORAGE = "diveIn.theme";
+const themeToggle = document.getElementById("themeToggle");
+const themeIconSun = document.getElementById("themeIconSun");
+const themeIconMoon = document.getElementById("themeIconMoon");
+
+function applyTheme(theme) {
+  if (theme === "dark") {
+    document.documentElement.setAttribute("data-theme", "dark");
+    themeIconSun.hidden = true;
+    themeIconMoon.hidden = false;
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+    themeIconSun.hidden = false;
+    themeIconMoon.hidden = true;
+  }
+}
+function initTheme() {
+  const saved = localStorage.getItem(THEME_STORAGE);
+  if (saved) {
+    applyTheme(saved);
+  } else {
+    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    applyTheme(prefersDark ? "dark" : "light");
+  }
+}
+themeToggle.addEventListener("click", () => {
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  const next = isDark ? "light" : "dark";
+  applyTheme(next);
+  localStorage.setItem(THEME_STORAGE, next);
+});
+initTheme();
+
+// ---------- AI tone & expertise tuning ----------
+const TUNING_STORAGE = "diveIn.aiTuning";
+const EXPERTISE_LABELS = { 1: "Beginner", 2: "Casual learner", 3: "Intermediate", 4: "Advanced", 5: "Expert" };
+
+function getTuning() {
+  try {
+    const t = JSON.parse(localStorage.getItem(TUNING_STORAGE));
+    if (t && t.tone) return t;
+  } catch {}
+  return { tone: "direct", customTone: "", expertise: 3 };
+}
+function setTuning(t) {
+  localStorage.setItem(TUNING_STORAGE, JSON.stringify(t));
+}
+
+const TONE_TEXT = {
+  direct: "Direct and analytical. Plain language, no fluff, no filler phrases like \"in conclusion\". Lead with the point.",
+  friendly: "Warm, encouraging mentor tone — like a knowledgeable friend explaining something they love, still substantive.",
+  academic: "Formal, academic register. Precise terminology, measured claims, no casual phrasing.",
+};
+
+function buildStyleInstruction() {
+  const t = getTuning();
+  const toneLine = t.tone === "custom" && t.customTone.trim()
+    ? t.customTone.trim()
+    : TONE_TEXT[t.tone] || TONE_TEXT.direct;
+
+  const level = Number(t.expertise) || 3;
+  const levelLines = {
+    1: "Audience is a total beginner. Use everyday language, concrete analogies, and at least one worked example. Define any unavoidable jargon immediately in plain words.",
+    2: "Audience has light familiarity. Use mostly simple language with a few field terms, each briefly explained. Include an example.",
+    3: "Audience has working knowledge. Balance accessible language with proper terminology — explain only the less obvious terms.",
+    4: "Audience is advanced. Use precise technical vocabulary freely, assume strong background, prioritize nuance over hand-holding.",
+    5: "Audience is an expert. Use dense, precise technical vocabulary, assume deep background, go straight for the non-obvious insight and open tensions — skip basic explanation entirely.",
+  };
+  return `Tone: ${toneLine}\n${levelLines[level] || levelLines[3]}`;
+}
+
+// ---------- Catalogue (localStorage) ----------
+const STORAGE_KEY = "diveIn.catalogue";
+function getCatalogue() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+function saveToCatalogue(topic, field) {
+  const cat = getCatalogue();
+  cat.unshift({ topic, field, date: new Date().toISOString() });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(cat.slice(0, 200)));
+  renderCatalogue();
+}
+function renderCatalogue() {
+  const cat = getCatalogue();
+  historyCount.textContent = cat.length;
+  historyList.innerHTML = "";
+  if (cat.length === 0) {
+    historyList.innerHTML = `<li class="drawer-empty">Nothing catalogued yet.</li>`;
+    return;
+  }
+  cat.forEach((entry) => {
+    const li = document.createElement("li");
+    li.className = "drawer-item";
+    const d = new Date(entry.date);
+    const dateStr = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    li.innerHTML = `<span class="drawer-item-title">${escapeHtml(entry.topic)}</span><span class="drawer-item-date">${dateStr}</span>`;
+    li.addEventListener("click", () => {
+      toggleDrawer(historyDrawer, false);
+      topicInput.value = entry.topic;
+      openDossier(entry.topic);
+    });
+    historyList.appendChild(li);
+  });
+}
+
+// ---------- Wikipedia (primer fallback + images) ----------
+async function fetchWikipediaSummary(topic) {
+  try {
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(topic)}&limit=1&namespace=0&format=json&origin=*`;
+    const searchRes = await fetch(searchUrl);
+    const searchData = await searchRes.json();
+    const title = (searchData[1] && searchData[1][0]) || topic;
+
+    const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+    const res = await fetch(summaryUrl);
+    if (!res.ok) throw new Error("no summary");
+    const data = await res.json();
+    return {
+      title: data.title,
+      extract: data.extract,
+      url: data.content_urls?.desktop?.page || null,
+      thumbnail: data.thumbnail?.source || data.originalimage?.source || null,
+    };
+  } catch (err) {
+    return null;
+  }
+}
+
+async function fetchWikiRelatedTopics(wikiTitle) {
+  if (!wikiTitle) return [];
+  try {
+    const url = `https://en.wikipedia.org/api/rest_v1/page/related/${encodeURIComponent(wikiTitle)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("no related");
+    const data = await res.json();
+    return (data.pages || []).slice(0, 8).map((p) => p.title);
+  } catch (err) {
+    return [];
+  }
+}
+
+// ---------- AI summary / related-topics / insights — via active connection ----------
+const SUMMARY_PROMPT = (topic) =>
+  `${buildStyleInstruction()}\n\nGive a 2-paragraph primer on "${topic}" for someone starting to go deep on it. First paragraph: what it actually is and why it matters. Second paragraph: the 2-3 central tensions or open questions in the field right now. Do not use markdown headers.`;
+
+async function fetchAiSummary(topic) {
+  if (!window.NodewayAI) return null;
+  try {
+    const text = await window.NodewayAI.callActive(SUMMARY_PROMPT(topic));
+    return text || null;
+  } catch (err) {
+    return null;
+  }
+}
+
+const NEXT_TOPICS_PROMPT = (topic) =>
+  `Someone is learning about "${topic}" and wants to go deeper — actually become knowledgeable, not just read a summary. List 6 to 8 specific, concrete subtopics, prerequisite concepts, or adjacent skills they should learn next to build real understanding of "${topic}". Each one should be a short, specific topic name (2-6 words) — not a sentence, not a question. One per line, no numbering, no bullets, no markdown, no extra commentary.`;
+
+async function fetchAiNextTopics(topic) {
+  if (!window.NodewayAI) return [];
+  try {
+    const text = await window.NodewayAI.callActive(NEXT_TOPICS_PROMPT(topic));
+    if (!text) return [];
+    return text
+      .split("\n")
+      .map((l) => l.replace(/^[\s\-•\d.)]+/, "").trim())
+      .filter((l) => l.length > 0 && l.length < 80)
+      .slice(0, 8);
+  } catch (err) {
+    return [];
+  }
+}
+
+// ---------- Images (Wikipedia thumbnail + Openverse, more of them, horizontal scroll) ----------
+async function fetchOpenverseImages(topic) {
+  try {
+    const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(topic)}&page_size=10&license_type=all`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("openverse error");
+    const data = await res.json();
+    return (data.results || [])
+      .filter((r) => r.thumbnail || r.url)
+      .slice(0, 10)
+      .map((r) => ({
+        thumb: r.thumbnail || r.url,
+        page: r.foreign_landing_url || r.url,
+        credit: r.creator || r.source || "",
+      }));
+  } catch (err) {
+    return [];
+  }
+}
+
+// ---------- Papers: CrossRef (broad coverage) + Semantic Scholar, merged + sorted by citations ----------
+async function fetchCrossref(topic) {
+  try {
+    const url = `https://api.crossref.org/works?query=${encodeURIComponent(topic)}&rows=8&sort=relevance`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("crossref error");
+    const data = await res.json();
+    const items = data.message?.items || [];
+    return items
+      .filter((it) => it.title && it.title[0])
+      .map((it) => ({
+        source: "CrossRef",
+        title: it.title[0],
+        abstract: it.abstract ? it.abstract.replace(/<[^>]+>/g, "") : "",
+        url: it.URL,
+        year: it["published-print"]?.["date-parts"]?.[0]?.[0] || it["published-online"]?.["date-parts"]?.[0]?.[0] || "",
+        venue: it["container-title"]?.[0] || "",
+        citations: typeof it["is-referenced-by-count"] === "number" ? it["is-referenced-by-count"] : null,
+      }));
+  } catch (err) {
+    return [];
+  }
+}
+
+async function fetchSemanticScholar(topic) {
+  try {
+    const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(topic)}&limit=8&fields=title,abstract,url,year,citationCount,venue`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("s2 error");
+    const data = await res.json();
+    return (data.data || [])
+      .filter((p) => p.title)
+      .map((p) => ({
+        source: "Semantic Scholar",
+        title: p.title,
+        abstract: p.abstract || "",
+        url: p.url,
+        year: p.year || "",
+        venue: p.venue || "",
+        citations: typeof p.citationCount === "number" ? p.citationCount : null,
+      }));
+  } catch (err) {
+    return [];
+  }
+}
+
+// ---------- Rendering ----------
+function renderSummary(aiText, wiki, topic) {
+  wikiLink.hidden = !wiki?.url;
+  if (wiki?.url) wikiLink.href = wiki.url;
+
+  if (aiText) {
+    const conn = window.NodewayAI ? window.NodewayAI.getActiveConnection() : null;
+    const label = conn ? `AI · ${conn.nickname}` : "AI";
+    summaryHeading.textContent = "AI Summary";
+    summaryBadge.textContent = label;
+    summaryBadge.classList.remove("wiki-badge");
+    primerBody.innerHTML = aiText
+      .split(/\n{2,}/)
+      .map((p) => `<p>${escapeHtml(p.trim())}</p>`)
+      .join("");
+    return;
+  }
+  summaryHeading.textContent = "Summary";
+  summaryBadge.textContent = "wiki";
+  summaryBadge.classList.add("wiki-badge");
+  if (!wiki || !wiki.extract) {
+    primerBody.innerHTML = `<p class="error-text">Couldn't pull an overview for "${escapeHtml(topic)}". Try a more standard name for it.</p>`;
+    return;
+  }
+  primerBody.innerHTML = `<p>${escapeHtml(wiki.extract)}</p><p class="source-note">Wikipedia extract — add an AI connection in Settings for a generated version instead.</p>`;
+}
+
+function renderImages(wikiThumb, openverseImages, topic) {
+  const all = [];
+  if (wikiThumb) all.push({ thumb: wikiThumb, page: null, credit: "Wikipedia" });
+  openverseImages.forEach((img) => all.push(img));
+
+  if (all.length === 0) {
+    imagesBody.innerHTML = `<p class="error-text">No images found for "${escapeHtml(topic)}".</p>`;
+    return;
+  }
+  imagesBody.innerHTML = all
+    .map((img) => {
+      const tag = `<img src="${img.thumb}" alt="${escapeHtml(topic)}" loading="lazy">`;
+      return img.page
+        ? `<a class="img-frame" href="${img.page}" target="_blank" rel="noopener">${tag}</a>`
+        : `<span class="img-frame">${tag}</span>`;
+    })
+    .join("") + `<span class="img-credit-frame">Wikipedia &amp; Openverse<br>(CC-licensed) · scroll for more →</span>`;
+}
+
+function renderPapers(papers) {
+  currentPapers = papers;
+  openInsightIdx = null;
+  closeInsightSheetFn();
+
+  if (!papers || papers.length === 0) {
+    papersBody.innerHTML = `<p class="error-text">No papers surfaced. Try <a href="https://www.semanticscholar.org/search?q=${encodeURIComponent(currentTopic)}" target="_blank" rel="noopener">Semantic Scholar</a> directly.</p>`;
+    return;
+  }
+  papersBody.innerHTML = papers
+    .map((p, idx) => {
+      const meta = [p.source, p.year, p.venue, p.citations != null ? `${p.citations} citations` : null]
+        .filter(Boolean)
+        .join(" · ");
+      return `
+        <div class="paper-card" data-idx="${idx}">
+          <p class="paper-title">${escapeHtml(p.title)}</p>
+          <p class="paper-meta">${escapeHtml(meta)}</p>
+          ${p.abstract ? `<p class="paper-abstract">${escapeHtml(truncate(p.abstract, 200))}</p>` : ""}
+          <p class="paper-hint">Click for insights ↓</p>
+        </div>`;
+    })
+    .join("");
+}
+
+function renderRelated(topics, sourceLabel) {
+  if (!topics || topics.length === 0) {
+    relatedBody.innerHTML = `<p class="error-text">Couldn't find related topics for "${escapeHtml(currentTopic)}". Try opening The Catalogue or Mind Map for other threads to pull on, or add an AI connection in Settings — it can suggest a learning path even when Wikipedia's related-pages data comes up empty.</p>`;
+    return;
+  }
+  relatedBody.innerHTML = "";
+  topics.forEach((t) => {
+    const chip = document.createElement("button");
+    chip.className = "chip";
+    chip.textContent = t;
+    chip.addEventListener("click", () => {
+      topicInput.value = t;
+      openDossier(t);
+    });
+    relatedBody.appendChild(chip);
+  });
+  if (sourceLabel) {
+    const note = document.createElement("p");
+    note.className = "chip-source-note";
+    note.textContent = sourceLabel;
+    relatedBody.appendChild(note);
+  }
+}
+
+// ---------- Paper insight bottom sheet ----------
+const INSIGHT_PROMPT = (paper) =>
+  `${buildStyleInstruction()}\n\nHere is a research paper.\nTitle: ${paper.title}\nAbstract: ${paper.abstract || "(not available — infer conservatively from the title only, and say the abstract wasn't available)"}\n\nGive me, in plain text, no markdown headers:\n1. One sentence on what this paper is actually about.\n2. 2-3 bullet points (start each with "- ") on the key findings I should expect.\n3. One line: anything genuinely surprising or counter-intuitive here — or say "nothing especially surprising here" if not.\nKeep it tight.`;
+
+function closeInsightSheetFn() {
+  insightSheet.hidden = true;
+  document.querySelectorAll(".paper-card.open").forEach((c) => c.classList.remove("open"));
+  openInsightIdx = null;
+}
+
+function formatInsightText(text) {
+  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  let html = "";
+  let inList = false;
+  lines.forEach((line) => {
+    const isBullet = /^[-•]\s*/.test(line);
+    if (isBullet) {
+      if (!inList) { html += "<ul>"; inList = true; }
+      html += `<li>${escapeHtml(line.replace(/^[-•]\s*/, ""))}</li>`;
+    } else {
+      if (inList) { html += "</ul>"; inList = false; }
+      html += `<p>${escapeHtml(line.replace(/^\d+\.\s*/, ""))}</p>`;
+    }
+  });
+  if (inList) html += "</ul>";
+  return html;
+}
+
+async function openInsightForPaper(idx) {
+  const paper = currentPapers[idx];
+  if (!paper) return;
+
+  if (openInsightIdx === idx) {
+    closeInsightSheetFn();
+    return;
+  }
+  document.querySelectorAll(".paper-card.open").forEach((c) => c.classList.remove("open"));
+  const card = papersBody.querySelector(`.paper-card[data-idx="${idx}"]`);
+  if (card) card.classList.add("open");
+  openInsightIdx = idx;
+
+  insightTitle.textContent = paper.title;
+  insightOpenPaper.href = paper.url || "#";
+  insightBody.innerHTML = `<p class="loading">Generating insights…</p>`;
+  insightSheet.hidden = false;
+
+  let text = null;
+  if (window.NodewayAI) {
+    try {
+      text = await window.NodewayAI.callActive(INSIGHT_PROMPT(paper));
+    } catch (err) {
+      text = null;
+    }
+  }
+  if (openInsightIdx !== idx) return; // stale click guard
+
+  if (text) {
+    insightBody.innerHTML = formatInsightText(text);
+  } else if (paper.abstract) {
+    insightBody.innerHTML = `<p>${escapeHtml(paper.abstract)}</p><p class="source-note">Raw abstract — add an AI connection in Settings for generated insights instead.</p>`;
+  } else {
+    insightBody.innerHTML = `<p class="error-text">No abstract available and no AI connection configured. Open the paper directly to read it.</p>`;
+  }
+}
+
+papersBody.addEventListener("click", (e) => {
+  const card = e.target.closest(".paper-card");
+  if (!card) return;
+  openInsightForPaper(Number(card.dataset.idx));
+});
+closeInsightSheet.addEventListener("click", closeInsightSheetFn);
+
+// ---------- Main open-dossier flow ----------
+async function openDossier(topic) {
+  currentTopic = topic.trim();
+  currentField = fieldForTopic(currentTopic);
+  closeInsightSheetFn();
+
+  heroSection.hidden = true;
+  dossierSection.hidden = false;
+
+  dossierTitle.textContent = currentTopic;
+  dossierField.textContent = currentField;
+
+  primerBody.innerHTML = `<p class="loading">Thinking…</p>`;
+  wikiLink.hidden = true;
+  imagesBody.innerHTML = `<p class="loading">Fetching images…</p>`;
+  papersBody.innerHTML = `<p class="loading">Querying CrossRef and Semantic Scholar…</p>`;
+  relatedBody.innerHTML = `<p class="loading">Finding what to learn next…</p>`;
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+
+  const [wiki, aiText, openverseImages, crossrefPapers, s2Papers] = await Promise.all([
+    fetchWikipediaSummary(currentTopic),
+    fetchAiSummary(currentTopic),
+    fetchOpenverseImages(currentTopic),
+    fetchCrossref(currentTopic),
+    fetchSemanticScholar(currentTopic),
+  ]);
+
+  renderSummary(aiText, wiki, currentTopic);
+  renderImages(wiki?.thumbnail, openverseImages, currentTopic);
+
+  const seen = new Set();
+  const mergedPapers = [...crossrefPapers, ...s2Papers]
+    .filter((p) => {
+      const key = p.title.toLowerCase().slice(0, 60);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => (b.citations ?? -1) - (a.citations ?? -1));
+  renderPapers(mergedPapers.slice(0, 12));
+
+  // "Explore Next": prefer AI-generated learning path (specific, always populated
+  // when a connection exists); fall back to Wikipedia's related-pages API.
+  let related = [];
+  let relatedSource = "";
+  const aiNext = await fetchAiNextTopics(currentTopic);
+  if (aiNext.length > 0) {
+    related = aiNext;
+    relatedSource = "AI-suggested — what to learn next to go deeper";
+  } else {
+    related = await fetchWikiRelatedTopics(wiki?.title);
+    relatedSource = related.length ? "From Wikipedia's related pages" : "";
+  }
+  renderRelated(related, relatedSource);
+
+  // feed the mind map: this topic is now "explored", related topics become "suggested"
+  if (window.NodewayMap) {
+    window.NodewayMap.addExplored(currentTopic, currentField);
+    window.NodewayMap.addSuggested(currentTopic, related);
+  }
+}
+
+// ---------- Drawers ----------
+function toggleDrawer(drawer, open) {
+  drawer.classList.toggle("open", open);
+  scrim.hidden = !open;
+}
+
+pathToggle.addEventListener("click", () => toggleDrawer(pathDrawer, true));
+closePathDrawer.addEventListener("click", () => toggleDrawer(pathDrawer, false));
+historyToggle.addEventListener("click", () => toggleDrawer(historyDrawer, true));
+closeHistoryDrawer.addEventListener("click", () => toggleDrawer(historyDrawer, false));
+scrim.addEventListener("click", () => {
+  toggleDrawer(pathDrawer, false);
+  toggleDrawer(historyDrawer, false);
+});
+
+// ---------- Settings: tabs + tone/expertise tuning ----------
+document.querySelectorAll(".settings-tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".settings-tab").forEach((t) => t.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById("paneConnections").hidden = tab.dataset.tab !== "connections";
+    document.getElementById("paneTuning").hidden = tab.dataset.tab !== "tuning";
+  });
+});
+
+const toneOptions = document.getElementById("toneOptions");
+const customToneInput = document.getElementById("customToneInput");
+const expertiseSlider = document.getElementById("expertiseSlider");
+const expertiseLabel = document.getElementById("expertiseLabel");
+const saveTuning = document.getElementById("saveTuning");
+
+function loadTuningIntoUI() {
+  const t = getTuning();
+  document.querySelectorAll(".tone-chip").forEach((chip) => {
+    chip.classList.toggle("active", chip.dataset.tone === t.tone);
+  });
+  customToneInput.hidden = t.tone !== "custom";
+  customToneInput.value = t.customTone || "";
+  expertiseSlider.value = t.expertise || 3;
+  expertiseLabel.textContent = EXPERTISE_LABELS[t.expertise || 3];
+}
+
+toneOptions.addEventListener("click", (e) => {
+  const chip = e.target.closest(".tone-chip");
+  if (!chip) return;
+  document.querySelectorAll(".tone-chip").forEach((c) => c.classList.remove("active"));
+  chip.classList.add("active");
+  customToneInput.hidden = chip.dataset.tone !== "custom";
+});
+
+expertiseSlider.addEventListener("input", () => {
+  expertiseLabel.textContent = EXPERTISE_LABELS[expertiseSlider.value];
+});
+
+saveTuning.addEventListener("click", () => {
+  const activeChip = document.querySelector(".tone-chip.active");
+  setTuning({
+    tone: activeChip ? activeChip.dataset.tone : "direct",
+    customTone: customToneInput.value,
+    expertise: Number(expertiseSlider.value),
+  });
+  const original = saveTuning.textContent;
+  saveTuning.textContent = "Saved ✓";
+  setTimeout(() => (saveTuning.textContent = original), 1400);
+});
+
+document.getElementById("settingsToggle").addEventListener("click", loadTuningIntoUI);
+
+// ---------- Search suggestions (typeahead against the topic shelf) ----------
+function renderSuggestions(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) {
+    suggestionList.hidden = true;
+    suggestionList.innerHTML = "";
+    return;
+  }
+  const matches = TOPIC_SHELF.filter((t) => t.topic.toLowerCase().includes(q)).slice(0, 6);
+  if (matches.length === 0) {
+    suggestionList.hidden = true;
+    suggestionList.innerHTML = "";
+    return;
+  }
+  suggestionList.innerHTML = matches
+    .map(
+      (t) =>
+        `<button type="button" class="suggestion-item" data-topic="${escapeHtml(t.topic)}">
+           <span>${escapeHtml(t.topic)}</span><span class="suggestion-field">${escapeHtml(t.field)}</span>
+         </button>`
+    )
+    .join("");
+  suggestionList.hidden = false;
+}
+
+topicInput.addEventListener("input", () => renderSuggestions(topicInput.value));
+topicInput.addEventListener("focus", () => renderSuggestions(topicInput.value));
+suggestionList.addEventListener("click", (e) => {
+  const btn = e.target.closest(".suggestion-item");
+  if (!btn) return;
+  const t = btn.dataset.topic;
+  topicInput.value = t;
+  suggestionList.hidden = true;
+  openDossier(t);
+});
+document.addEventListener("click", (e) => {
+  if (!topicInput.contains(e.target) && !suggestionList.contains(e.target)) {
+    suggestionList.hidden = true;
+  }
+});
+
+// ---------- Surprise-me hover popover ----------
+function pickRandomTopics(n) {
+  const pool = [...TOPIC_SHELF];
+  const picks = [];
+  while (picks.length < n && pool.length > 0) {
+    const i = Math.floor(Math.random() * pool.length);
+    picks.push(pool.splice(i, 1)[0]);
+  }
+  return picks;
+}
+
+function renderSurpriseChips() {
+  const picks = pickRandomTopics(5);
+  surpriseChips.innerHTML = picks
+    .map((t) => `<button type="button" class="chip surprise-chip" data-topic="${escapeHtml(t.topic)}">${escapeHtml(t.topic)}</button>`)
+    .join("");
+}
+
+let surpriseHideTimer = null;
+function openSurprisePopover() {
+  clearTimeout(surpriseHideTimer);
+  renderSurpriseChips();
+  surprisePopover.hidden = false;
+}
+function scheduleHideSurprisePopover() {
+  surpriseHideTimer = setTimeout(() => {
+    surprisePopover.hidden = true;
+  }, 250);
+}
+
+surpriseWrap.addEventListener("mouseenter", openSurprisePopover);
+surpriseWrap.addEventListener("mouseleave", scheduleHideSurprisePopover);
+randomBtn.addEventListener("touchstart", (e) => {
+  if (surprisePopover.hidden) {
+    e.preventDefault();
+    openSurprisePopover();
+  }
+});
+surpriseChips.addEventListener("click", (e) => {
+  const chip = e.target.closest(".surprise-chip");
+  if (!chip) return;
+  const t = chip.dataset.topic;
+  topicInput.value = t;
+  surprisePopover.hidden = true;
+  openDossier(t);
+});
+
+// ---------- Form / nav ----------
+topicForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const val = topicInput.value.trim();
+  if (!val) return;
+  suggestionList.hidden = true;
+  openDossier(val);
+});
+
+randomBtn.addEventListener("click", () => {
+  const pick = pickRandomTopic();
+  topicInput.value = pick.topic;
+  surprisePopover.hidden = true;
+  openDossier(pick.topic);
+});
+
+newTopicBtn.addEventListener("click", () => {
+  dossierSection.hidden = true;
+  heroSection.hidden = false;
+  topicInput.value = "";
+  closeInsightSheetFn();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
+markReadBtn.addEventListener("click", () => {
+  if (!currentTopic) return;
+  saveToCatalogue(currentTopic, currentField);
+  markReadBtn.textContent = "Catalogued ✓";
+  setTimeout(() => (markReadBtn.textContent = "Catalogue this session"), 1600);
+});
+
+// ---------- Mind Map toggle ----------
+const mapToggle = document.getElementById("mapToggle");
+mapToggle.addEventListener("click", () => {
+  if (window.NodewayMap) window.NodewayMap.open();
+});
+
+// ---------- Init ----------
+renderCatalogue();
+
+</script>
+<script>
+// ---------- Mind Map: persisted graph + clustered D3 force-directed render ----------
+(function () {
+  const GRAPH_STORAGE = "diveIn.graph";
+  const MAX_NODES = 140;
+
+  function loadGraph() {
+    try {
+      const g = JSON.parse(localStorage.getItem(GRAPH_STORAGE));
+      if (g && Array.isArray(g.nodes) && Array.isArray(g.links)) {
+        if (!g.clusterNames) g.clusterNames = {};
+        return g;
+      }
+    } catch {}
+    return { nodes: [], links: [], clusterNames: {} };
+  }
+
+  function saveGraph(g) {
+    if (g.nodes.length > MAX_NODES) {
+      const explored = g.nodes.filter((n) => n.status === "explored");
+      const suggested = g.nodes.filter((n) => n.status !== "explored").slice(-1 * (MAX_NODES - explored.length));
+      const keepIds = new Set([...explored, ...suggested].map((n) => n.id));
+      g.nodes = g.nodes.filter((n) => keepIds.has(n.id));
+      g.links = g.links.filter(
+        (l) => keepIds.has(l.source.id || l.source) && keepIds.has(l.target.id || l.target)
+      );
+    }
+    localStorage.setItem(GRAPH_STORAGE, JSON.stringify(g));
+  }
+
+  function nodeId(topic) {
+    return topic.trim().toLowerCase();
+  }
+
+  function addExplored(topic, field) {
+    const g = loadGraph();
+    const id = nodeId(topic);
+    const existing = g.nodes.find((n) => n.id === id);
+    if (existing) {
+      existing.status = "explored";
+      existing.field = field;
+      existing.label = topic;
+      if (!existing.clusterId) existing.clusterId = id;
+    } else {
+      g.nodes.push({ id, label: topic, field: field || "general", status: "explored", clusterId: id });
+    }
+    saveGraph(g);
+  }
+
+  function addSuggested(fromTopic, relatedTitles) {
+    if (!relatedTitles || relatedTitles.length === 0) return;
+    const g = loadGraph();
+    const fromId = nodeId(fromTopic);
+    let fromNode = g.nodes.find((n) => n.id === fromId);
+    if (!fromNode) {
+      fromNode = { id: fromId, label: fromTopic, field: "general", status: "explored", clusterId: fromId };
+      g.nodes.push(fromNode);
+    }
+    const clusterId = fromNode.clusterId || fromId;
+
+    relatedTitles.forEach((title) => {
+      const id = nodeId(title);
+      if (id === fromId) return;
+      let node = g.nodes.find((n) => n.id === id);
+      if (!node) {
+        node = { id, label: title, field: "general", status: "suggested", clusterId };
+        g.nodes.push(node);
+      }
+      const linkExists = g.links.find(
+        (l) => (l.source === fromId || l.source?.id === fromId) && (l.target === id || l.target?.id === id)
+      );
+      if (!linkExists) g.links.push({ source: fromId, target: id });
+    });
+    saveGraph(g);
+  }
+
+  function clearGraph() {
+    localStorage.removeItem(GRAPH_STORAGE);
+  }
+
+  function renameCluster(clusterId, name) {
+    const g = loadGraph();
+    g.clusterNames[clusterId] = name;
+    saveGraph(g);
+  }
+
+  function clusterLabelFor(g, clusterId) {
+    if (g.clusterNames[clusterId]) return g.clusterNames[clusterId];
+    const root = g.nodes.find((n) => n.id === clusterId);
+    return root ? root.label : clusterId;
+  }
+
+  // ---------- Rendering ----------
+  const overlay = document.getElementById("mapOverlay");
+  const svgEl = document.getElementById("mapSvg");
+  const emptyEl = document.getElementById("mapEmpty");
+  const closeBtn = document.getElementById("closeMapBtn");
+  const clearBtn = document.getElementById("clearMapBtn");
+
+  let simulation = null;
+  const hullLine = d3.line().curve(d3.curveCatmullRomClosed.alpha(0.9));
+
+  function computeClusterPaths(nodes) {
+    const byCluster = d3.group(nodes, (d) => d.clusterId);
+    const paths = [];
+    byCluster.forEach((members, clusterId) => {
+      if (members.length < 2) return; // singletons don't get a blob
+      const pts = members.map((m) => [m.x, m.y]);
+      const cx = d3.mean(pts, (p) => p[0]);
+      const cy = d3.mean(pts, (p) => p[1]);
+      const pad = 46;
+      let hullPts;
+      if (pts.length === 2) {
+        // fake a capsule by adding two offset points perpendicular to the line
+        const [a, b] = pts;
+        const dx = b[0] - a[0], dy = b[1] - a[1];
+        const len = Math.hypot(dx, dy) || 1;
+        const nx = (-dy / len) * pad, ny = (dx / len) * pad;
+        hullPts = [
+          [a[0] + nx, a[1] + ny], [b[0] + nx, b[1] + ny],
+          [b[0] - nx, b[1] - ny], [a[0] - nx, a[1] - ny],
+        ];
+      } else {
+        const hull = d3.polygonHull(pts);
+        if (!hull) return;
+        hullPts = hull.map(([x, y]) => {
+          const dx = x - cx, dy = y - cy;
+          const dist = Math.hypot(dx, dy) || 1;
+          const scale = (dist + pad) / dist;
+          return [cx + dx * scale, cy + dy * scale];
+        });
+      }
+      const topPoint = hullPts.reduce((top, p) => (p[1] < top[1] ? p : top), hullPts[0]);
+      paths.push({ clusterId, d: hullLine(hullPts), labelX: topPoint[0], labelY: topPoint[1] - 10 });
+    });
+    return paths;
+  }
+
+  function render() {
+    const g = loadGraph();
+    svgEl.innerHTML = "";
+
+    if (g.nodes.length === 0) {
+      emptyEl.hidden = false;
+      return;
+    }
+    emptyEl.hidden = true;
+
+    const width = svgEl.clientWidth || 900;
+    const height = svgEl.clientHeight || 560;
+
+    const svg = d3.select(svgEl).attr("viewBox", [0, 0, width, height]);
+    const zoomLayer = svg.append("g");
+    const clusterLayer = zoomLayer.append("g").attr("class", "cluster-layer");
+    const linkLayer = zoomLayer.append("g");
+    const nodeLayer = zoomLayer.append("g");
+
+    svg.call(
+      d3.zoom().scaleExtent([0.35, 2.5]).on("zoom", (event) => {
+        zoomLayer.attr("transform", event.transform);
+      })
+    );
+
+    const nodes = g.nodes.map((n) => ({ ...n }));
+    const links = g.links.map((l) => ({ ...l }));
+
+    if (simulation) simulation.stop();
+    simulation = d3
+      .forceSimulation(nodes)
+      .force("link", d3.forceLink(links).id((d) => d.id).distance(90).strength(0.55))
+      .force("charge", d3.forceManyBody().strength(-230))
+      .force("cluster", forceCluster(nodes, 0.04))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collide", d3.forceCollide().radius(34));
+
+    function forceCluster(allNodes, strength) {
+      return function (alpha) {
+        const centroids = d3.rollup(
+          allNodes,
+          (v) => ({ x: d3.mean(v, (d) => d.x), y: d3.mean(v, (d) => d.y) }),
+          (d) => d.clusterId
+        );
+        allNodes.forEach((d) => {
+          const c = centroids.get(d.clusterId);
+          if (!c || c.x == null) return;
+          d.vx -= (d.x - c.x) * strength * alpha;
+          d.vy -= (d.y - c.y) * strength * alpha;
+        });
+      };
+    }
+
+    const link = linkLayer
+      .attr("stroke", "var(--shadow-dark)")
+      .attr("stroke-width", 1.4)
+      .selectAll("line")
+      .data(links)
+      .join("line");
+
+    const node = nodeLayer
+      .selectAll("g")
+      .data(nodes)
+      .join("g")
+      .attr("class", "map-node")
+      .style("cursor", "pointer")
+      .call(
+        d3
+          .drag()
+          .on("start", (event, d) => {
+            if (!event.active) simulation.alphaTarget(0.25).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+          })
+          .on("drag", (event, d) => {
+            d.fx = event.x;
+            d.fy = event.y;
+          })
+          .on("end", (event, d) => {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+          })
+      )
+      .on("click", (event, d) => {
+        overlay.hidden = true;
+        const input = document.getElementById("topicInput");
+        input.value = d.label;
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        if (typeof openDossier === "function") openDossier(d.label);
+      });
+
+    node
+      .append("circle")
+      .attr("r", (d) => (d.status === "explored" ? 12 : 8))
+      .attr("fill", (d) => (d.status === "explored" ? "#16a394" : "#4c4fe0"))
+      .attr("fill-opacity", (d) => (d.status === "explored" ? 1 : 0.55))
+      .attr("stroke", "#fff")
+      .attr("stroke-width", 2);
+
+    node
+      .append("text")
+      .text((d) => d.label)
+      .attr("x", 16)
+      .attr("y", 4)
+      .attr("font-family", "Inter, sans-serif")
+      .attr("font-size", 11)
+      .attr("font-weight", (d) => (d.status === "explored" ? 700 : 500))
+      .attr("fill", "var(--text)")
+      .style("pointer-events", "none");
+
+    let tickCount = 0;
+    simulation.on("tick", () => {
+      tickCount++;
+      link
+        .attr("x1", (d) => d.source.x)
+        .attr("y1", (d) => d.source.y)
+        .attr("x2", (d) => d.target.x)
+        .attr("y2", (d) => d.target.y);
+      node.attr("transform", (d) => `translate(${d.x},${d.y})`);
+
+      if (tickCount % 4 === 0) drawClusters(nodes, g);
+    });
+    simulation.on("end", () => drawClusters(nodes, g));
+
+    function drawClusters(currentNodes, graphData) {
+      const paths = computeClusterPaths(currentNodes);
+      const sel = clusterLayer.selectAll("g.cluster-blob").data(paths, (d) => d.clusterId);
+      const enter = sel.enter().append("g").attr("class", "cluster-blob");
+      enter.append("path");
+      enter
+        .append("text")
+        .attr("class", "cluster-label")
+        .attr("font-family", "Inter, sans-serif")
+        .attr("font-size", 12)
+        .attr("font-weight", 700)
+        .attr("fill", "var(--indigo)")
+        .attr("text-anchor", "middle")
+        .style("cursor", "text")
+        .on("dblclick", function (event, d) {
+          event.stopPropagation();
+          const current = clusterLabelFor(graphData, d.clusterId);
+          const name = window.prompt("Name this cluster:", current);
+          if (name && name.trim()) {
+            renameCluster(d.clusterId, name.trim());
+            d3.select(this).text(name.trim());
+          }
+        });
+
+      const merged = enter.merge(sel);
+      merged.select("path")
+        .attr("d", (d) => d.d)
+        .attr("fill", "var(--indigo-soft)")
+        .attr("fill-opacity", 0.35)
+        .attr("stroke", "var(--indigo)")
+        .attr("stroke-opacity", 0.3)
+        .attr("stroke-width", 1.5);
+      merged.select("text")
+        .attr("x", (d) => d.labelX)
+        .attr("y", (d) => d.labelY)
+        .text((d) => clusterLabelFor(graphData, d.clusterId));
+
+      sel.exit().remove();
+    }
+  }
+
+  function open() {
+    overlay.hidden = false;
+    requestAnimationFrame(render);
+  }
+  function close() {
+    overlay.hidden = true;
+    if (simulation) simulation.stop();
+  }
+
+  closeBtn.addEventListener("click", close);
+  clearBtn.addEventListener("click", () => {
+    if (confirm("Clear the entire mind map? This can't be undone.")) {
+      clearGraph();
+      render();
+    }
+  });
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+  window.addEventListener("resize", () => {
+    if (!overlay.hidden) render();
+  });
+
+  window.NodewayMap = { addExplored, addSuggested, clearGraph, renameCluster, open, close };
+})();
+
+</script>
+</body>
+</html>

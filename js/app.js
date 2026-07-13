@@ -57,8 +57,80 @@ function truncate(str, n) {
   return str.length > n ? str.slice(0, n).trim() + "…" : str;
 }
 
+// ---------- Dark mode ----------
+const THEME_STORAGE = "diveIn.theme";
+const themeToggle = document.getElementById("themeToggle");
+const themeIconSun = document.getElementById("themeIconSun");
+const themeIconMoon = document.getElementById("themeIconMoon");
+
+function applyTheme(theme) {
+  if (theme === "dark") {
+    document.documentElement.setAttribute("data-theme", "dark");
+    themeIconSun.hidden = true;
+    themeIconMoon.hidden = false;
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+    themeIconSun.hidden = false;
+    themeIconMoon.hidden = true;
+  }
+}
+function initTheme() {
+  const saved = localStorage.getItem(THEME_STORAGE);
+  if (saved) {
+    applyTheme(saved);
+  } else {
+    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    applyTheme(prefersDark ? "dark" : "light");
+  }
+}
+themeToggle.addEventListener("click", () => {
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  const next = isDark ? "light" : "dark";
+  applyTheme(next);
+  localStorage.setItem(THEME_STORAGE, next);
+});
+initTheme();
+
+// ---------- AI tone & expertise tuning ----------
+const TUNING_STORAGE = "diveIn.aiTuning";
+const EXPERTISE_LABELS = { 1: "Beginner", 2: "Casual learner", 3: "Intermediate", 4: "Advanced", 5: "Expert" };
+
+function getTuning() {
+  try {
+    const t = JSON.parse(localStorage.getItem(TUNING_STORAGE));
+    if (t && t.tone) return t;
+  } catch {}
+  return { tone: "direct", customTone: "", expertise: 3 };
+}
+function setTuning(t) {
+  localStorage.setItem(TUNING_STORAGE, JSON.stringify(t));
+}
+
+const TONE_TEXT = {
+  direct: "Direct and analytical. Plain language, no fluff, no filler phrases like \"in conclusion\". Lead with the point.",
+  friendly: "Warm, encouraging mentor tone — like a knowledgeable friend explaining something they love, still substantive.",
+  academic: "Formal, academic register. Precise terminology, measured claims, no casual phrasing.",
+};
+
+function buildStyleInstruction() {
+  const t = getTuning();
+  const toneLine = t.tone === "custom" && t.customTone.trim()
+    ? t.customTone.trim()
+    : TONE_TEXT[t.tone] || TONE_TEXT.direct;
+
+  const level = Number(t.expertise) || 3;
+  const levelLines = {
+    1: "Audience is a total beginner. Use everyday language, concrete analogies, and at least one worked example. Define any unavoidable jargon immediately in plain words.",
+    2: "Audience has light familiarity. Use mostly simple language with a few field terms, each briefly explained. Include an example.",
+    3: "Audience has working knowledge. Balance accessible language with proper terminology — explain only the less obvious terms.",
+    4: "Audience is advanced. Use precise technical vocabulary freely, assume strong background, prioritize nuance over hand-holding.",
+    5: "Audience is an expert. Use dense, precise technical vocabulary, assume deep background, go straight for the non-obvious insight and open tensions — skip basic explanation entirely.",
+  };
+  return `Tone: ${toneLine}\n${levelLines[level] || levelLines[3]}`;
+}
+
 // ---------- Catalogue (localStorage) ----------
-const STORAGE_KEY = "nodeway.catalogue";
+const STORAGE_KEY = "diveIn.catalogue";
 function getCatalogue() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
   catch { return []; }
@@ -92,7 +164,7 @@ function renderCatalogue() {
   });
 }
 
-// ---------- Wikipedia (primer fallback + images + related) ----------
+// ---------- Wikipedia (primer fallback + images) ----------
 async function fetchWikipediaSummary(topic) {
   try {
     const searchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(topic)}&limit=1&namespace=0&format=json&origin=*`;
@@ -115,7 +187,7 @@ async function fetchWikipediaSummary(topic) {
   }
 }
 
-async function fetchRelatedTopics(wikiTitle) {
+async function fetchWikiRelatedTopics(wikiTitle) {
   if (!wikiTitle) return [];
   try {
     const url = `https://en.wikipedia.org/api/rest_v1/page/related/${encodeURIComponent(wikiTitle)}`;
@@ -128,9 +200,9 @@ async function fetchRelatedTopics(wikiTitle) {
   }
 }
 
-// ---------- AI summary — routed through the active connection (js/connections.js) ----------
+// ---------- AI summary / related-topics / insights — via active connection ----------
 const SUMMARY_PROMPT = (topic) =>
-  `Give a sharp, concrete 2-paragraph primer on "${topic}" for someone starting to go deep on it. First paragraph: what it actually is and why it matters. Second paragraph: the 2-3 central tensions or open questions in the field right now. Plain language, no fluff, no "in conclusion." Do not use markdown headers.`;
+  `${buildStyleInstruction()}\n\nGive a 2-paragraph primer on "${topic}" for someone starting to go deep on it. First paragraph: what it actually is and why it matters. Second paragraph: the 2-3 central tensions or open questions in the field right now. Do not use markdown headers.`;
 
 async function fetchAiSummary(topic) {
   if (!window.NodewayAI) return null;
@@ -142,16 +214,34 @@ async function fetchAiSummary(topic) {
   }
 }
 
-// ---------- Images (Wikipedia thumbnail + Openverse) ----------
+const NEXT_TOPICS_PROMPT = (topic) =>
+  `Someone is learning about "${topic}" and wants to go deeper — actually become knowledgeable, not just read a summary. List 6 to 8 specific, concrete subtopics, prerequisite concepts, or adjacent skills they should learn next to build real understanding of "${topic}". Each one should be a short, specific topic name (2-6 words) — not a sentence, not a question. One per line, no numbering, no bullets, no markdown, no extra commentary.`;
+
+async function fetchAiNextTopics(topic) {
+  if (!window.NodewayAI) return [];
+  try {
+    const text = await window.NodewayAI.callActive(NEXT_TOPICS_PROMPT(topic));
+    if (!text) return [];
+    return text
+      .split("\n")
+      .map((l) => l.replace(/^[\s\-•\d.)]+/, "").trim())
+      .filter((l) => l.length > 0 && l.length < 80)
+      .slice(0, 8);
+  } catch (err) {
+    return [];
+  }
+}
+
+// ---------- Images (Wikipedia thumbnail + Openverse, more of them, horizontal scroll) ----------
 async function fetchOpenverseImages(topic) {
   try {
-    const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(topic)}&page_size=3&license_type=all`;
+    const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(topic)}&page_size=10&license_type=all`;
     const res = await fetch(url);
     if (!res.ok) throw new Error("openverse error");
     const data = await res.json();
     return (data.results || [])
       .filter((r) => r.thumbnail || r.url)
-      .slice(0, 3)
+      .slice(0, 10)
       .map((r) => ({
         thumb: r.thumbnail || r.url,
         page: r.foreign_landing_url || r.url,
@@ -241,16 +331,17 @@ function renderImages(wikiThumb, openverseImages, topic) {
   openverseImages.forEach((img) => all.push(img));
 
   if (all.length === 0) {
-    imagesBody.innerHTML = `<p class="error-text" style="grid-column:1/-1;">No images found for "${escapeHtml(topic)}".</p>`;
+    imagesBody.innerHTML = `<p class="error-text">No images found for "${escapeHtml(topic)}".</p>`;
     return;
   }
   imagesBody.innerHTML = all
-    .slice(0, 3)
     .map((img) => {
       const tag = `<img src="${img.thumb}" alt="${escapeHtml(topic)}" loading="lazy">`;
-      return img.page ? `<a href="${img.page}" target="_blank" rel="noopener">${tag}</a>` : tag;
+      return img.page
+        ? `<a class="img-frame" href="${img.page}" target="_blank" rel="noopener">${tag}</a>`
+        : `<span class="img-frame">${tag}</span>`;
     })
-    .join("") + `<span class="img-credit">Images via Wikipedia &amp; Openverse (CC-licensed).</span>`;
+    .join("") + `<span class="img-credit-frame">Wikipedia &amp; Openverse<br>(CC-licensed) · scroll for more →</span>`;
 }
 
 function renderPapers(papers) {
@@ -278,9 +369,9 @@ function renderPapers(papers) {
     .join("");
 }
 
-function renderRelated(topics) {
+function renderRelated(topics, sourceLabel) {
   if (!topics || topics.length === 0) {
-    relatedBody.innerHTML = `<p class="error-text">No related topics found.</p>`;
+    relatedBody.innerHTML = `<p class="error-text">Couldn't find related topics for "${escapeHtml(currentTopic)}". Try opening The Catalogue or Mind Map for other threads to pull on, or add an AI connection in Settings — it can suggest a learning path even when Wikipedia's related-pages data comes up empty.</p>`;
     return;
   }
   relatedBody.innerHTML = "";
@@ -294,11 +385,17 @@ function renderRelated(topics) {
     });
     relatedBody.appendChild(chip);
   });
+  if (sourceLabel) {
+    const note = document.createElement("p");
+    note.className = "chip-source-note";
+    note.textContent = sourceLabel;
+    relatedBody.appendChild(note);
+  }
 }
 
 // ---------- Paper insight bottom sheet ----------
 const INSIGHT_PROMPT = (paper) =>
-  `Here is a research paper.\nTitle: ${paper.title}\nAbstract: ${paper.abstract || "(not available — infer conservatively from the title only, and say the abstract wasn't available)"}\n\nGive me, in plain text, no markdown headers:\n1. One sentence on what this paper is actually about.\n2. 2-3 bullet points (start each with "- ") on the key findings I should expect.\n3. One line: anything genuinely surprising or counter-intuitive here — or say "nothing especially surprising here" if not.\nKeep it tight.`;
+  `${buildStyleInstruction()}\n\nHere is a research paper.\nTitle: ${paper.title}\nAbstract: ${paper.abstract || "(not available — infer conservatively from the title only, and say the abstract wasn't available)"}\n\nGive me, in plain text, no markdown headers:\n1. One sentence on what this paper is actually about.\n2. 2-3 bullet points (start each with "- ") on the key findings I should expect.\n3. One line: anything genuinely surprising or counter-intuitive here — or say "nothing especially surprising here" if not.\nKeep it tight.`;
 
 function closeInsightSheetFn() {
   insightSheet.hidden = true;
@@ -350,15 +447,14 @@ async function openInsightForPaper(idx) {
       text = null;
     }
   }
-  // stale click guard — user may have clicked another paper while this was in flight
-  if (openInsightIdx !== idx) return;
+  if (openInsightIdx !== idx) return; // stale click guard
 
   if (text) {
     insightBody.innerHTML = formatInsightText(text);
   } else if (paper.abstract) {
-    insightBody.innerHTML = `<p>${escapeHtml(paper.abstract)}</p><p class="source-note">Raw abstract — add an AI connection in Settings for generated insights (what it's about, key findings, what's surprising) instead.</p>`;
+    insightBody.innerHTML = `<p>${escapeHtml(paper.abstract)}</p><p class="source-note">Raw abstract — add an AI connection in Settings for generated insights instead.</p>`;
   } else {
-    insightBody.innerHTML = `<p class="error-text">No abstract available and no AI connection configured to generate insights. Open the paper directly to read it.</p>`;
+    insightBody.innerHTML = `<p class="error-text">No abstract available and no AI connection configured. Open the paper directly to read it.</p>`;
   }
 }
 
@@ -385,7 +481,7 @@ async function openDossier(topic) {
   wikiLink.hidden = true;
   imagesBody.innerHTML = `<p class="loading">Fetching images…</p>`;
   papersBody.innerHTML = `<p class="loading">Querying CrossRef and Semantic Scholar…</p>`;
-  relatedBody.innerHTML = `<p class="loading">Finding related nodes…</p>`;
+  relatedBody.innerHTML = `<p class="loading">Finding what to learn next…</p>`;
 
   window.scrollTo({ top: 0, behavior: "smooth" });
 
@@ -411,8 +507,19 @@ async function openDossier(topic) {
     .sort((a, b) => (b.citations ?? -1) - (a.citations ?? -1));
   renderPapers(mergedPapers.slice(0, 12));
 
-  const related = await fetchRelatedTopics(wiki?.title);
-  renderRelated(related);
+  // "Explore Next": prefer AI-generated learning path (specific, always populated
+  // when a connection exists); fall back to Wikipedia's related-pages API.
+  let related = [];
+  let relatedSource = "";
+  const aiNext = await fetchAiNextTopics(currentTopic);
+  if (aiNext.length > 0) {
+    related = aiNext;
+    relatedSource = "AI-suggested — what to learn next to go deeper";
+  } else {
+    related = await fetchWikiRelatedTopics(wiki?.title);
+    relatedSource = related.length ? "From Wikipedia's related pages" : "";
+  }
+  renderRelated(related, relatedSource);
 
   // feed the mind map: this topic is now "explored", related topics become "suggested"
   if (window.NodewayMap) {
@@ -435,6 +542,59 @@ scrim.addEventListener("click", () => {
   toggleDrawer(pathDrawer, false);
   toggleDrawer(historyDrawer, false);
 });
+
+// ---------- Settings: tabs + tone/expertise tuning ----------
+document.querySelectorAll(".settings-tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".settings-tab").forEach((t) => t.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById("paneConnections").hidden = tab.dataset.tab !== "connections";
+    document.getElementById("paneTuning").hidden = tab.dataset.tab !== "tuning";
+  });
+});
+
+const toneOptions = document.getElementById("toneOptions");
+const customToneInput = document.getElementById("customToneInput");
+const expertiseSlider = document.getElementById("expertiseSlider");
+const expertiseLabel = document.getElementById("expertiseLabel");
+const saveTuning = document.getElementById("saveTuning");
+
+function loadTuningIntoUI() {
+  const t = getTuning();
+  document.querySelectorAll(".tone-chip").forEach((chip) => {
+    chip.classList.toggle("active", chip.dataset.tone === t.tone);
+  });
+  customToneInput.hidden = t.tone !== "custom";
+  customToneInput.value = t.customTone || "";
+  expertiseSlider.value = t.expertise || 3;
+  expertiseLabel.textContent = EXPERTISE_LABELS[t.expertise || 3];
+}
+
+toneOptions.addEventListener("click", (e) => {
+  const chip = e.target.closest(".tone-chip");
+  if (!chip) return;
+  document.querySelectorAll(".tone-chip").forEach((c) => c.classList.remove("active"));
+  chip.classList.add("active");
+  customToneInput.hidden = chip.dataset.tone !== "custom";
+});
+
+expertiseSlider.addEventListener("input", () => {
+  expertiseLabel.textContent = EXPERTISE_LABELS[expertiseSlider.value];
+});
+
+saveTuning.addEventListener("click", () => {
+  const activeChip = document.querySelector(".tone-chip.active");
+  setTuning({
+    tone: activeChip ? activeChip.dataset.tone : "direct",
+    customTone: customToneInput.value,
+    expertise: Number(expertiseSlider.value),
+  });
+  const original = saveTuning.textContent;
+  saveTuning.textContent = "Saved ✓";
+  setTimeout(() => (saveTuning.textContent = original), 1400);
+});
+
+document.getElementById("settingsToggle").addEventListener("click", loadTuningIntoUI);
 
 // ---------- Search suggestions (typeahead against the topic shelf) ----------
 function renderSuggestions(query) {

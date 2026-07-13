@@ -128,7 +128,10 @@
 
   async function callOpenAiCompatible(conn, prompt) {
     if (!conn.baseUrl) throw new Error("missing base url");
-    const res = await fetch(`${conn.baseUrl}/chat/completions`, {
+    // tolerate someone pasting the full endpoint (e.g. ".../v1/chat/completions")
+    // instead of just the base (e.g. ".../v1") — strip it back down to the base.
+    const cleanBase = conn.baseUrl.replace(/\/?(chat\/completions)\/?$/, "").replace(/\/$/, "");
+    const res = await fetch(`${cleanBase}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -139,7 +142,10 @@
         messages: [{ role: "user", content: prompt }],
       }),
     });
-    if (!res.ok) throw new Error("openai-compatible http " + res.status);
+    if (!res.ok) {
+      const bodyText = await res.text().catch(() => "");
+      throw new Error("openai-compatible http " + res.status + (bodyText ? " — " + bodyText.slice(0, 200) : ""));
+    }
     const data = await res.json();
     return data.choices?.[0]?.message?.content || "";
   }
@@ -161,13 +167,19 @@
     const conn = getConnections().find((c) => c.id === id);
     if (!conn) return "error";
     let status = "error";
+    let errorMessage = "";
     try {
-      const text = await call(conn, 'Reply with exactly one word: OK');
+      const text = await call(conn, "Reply with exactly one word: OK");
       status = text && text.trim().length > 0 ? "ok" : "error";
+      if (status === "error") errorMessage = "Got an empty response back.";
     } catch (err) {
       status = "error";
+      errorMessage = err.message || String(err);
+      if (/failed to fetch/i.test(errorMessage)) {
+        errorMessage += " — this usually means the request was blocked before reaching the server (CORS or a network/ad-blocker issue), not a bad key or model.";
+      }
     }
-    updateConnection(id, { status, lastTestedAt: Date.now() });
+    updateConnection(id, { status, lastTestedAt: Date.now(), lastError: errorMessage });
     updateGearDot();
     return status;
   }
@@ -245,11 +257,13 @@
         if (status === "error") {
           const row = el.querySelector(`.connection-row[data-id="${id}"]`);
           if (row) {
+            const conn = getConnections().find((c) => c.id === id);
             const note = document.createElement("p");
             note.className = "error-text connection-error-note";
-            note.textContent = "Couldn't connect — check the API key, model name, and (for OpenAI-compatible) the base URL.";
+            note.textContent = conn?.lastError
+              ? `Couldn't connect — ${conn.lastError}`
+              : "Couldn't connect — check the API key, model name, and (for OpenAI-compatible) the base URL.";
             row.after(note);
-            setTimeout(() => note.remove(), 5000);
           }
         }
       } else if (removeBtn) {
