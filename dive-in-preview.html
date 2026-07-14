@@ -57,6 +57,8 @@ html, body {
   color: var(--text);
   font-family: var(--display);
   transition: background 0.2s ease, color 0.2s ease;
+  overflow-x: hidden; /* safety net: no child should ever be able to widen the page */
+  max-width: 100vw;
 }
 
 a { color: var(--indigo); }
@@ -225,7 +227,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; }
 
 .dossier-grid {
   display: grid;
-  grid-template-columns: 1.3fr 1fr;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
   gap: 22px;
 }
 .node-card-papers, .node-card-related { grid-column: 1 / -1; }
@@ -233,6 +235,7 @@ button, input, select, textarea { font-family: inherit; color: inherit; }
 .node-card {
   background: var(--bg); border-radius: var(--radius); box-shadow: var(--shadow-out);
   padding: 24px 26px;
+  min-width: 0; /* critical: without this, a scrolling child can blow out the grid track width */
 }
 .node-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
 .node-card-head h3 { font-size: 0.98rem; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
@@ -258,15 +261,18 @@ button, input, select, textarea { font-family: inherit; color: inherit; }
   display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px;
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
+  width: 100%; max-width: 100%;
 }
 .images-carousel::-webkit-scrollbar { height: 6px; }
 .images-carousel::-webkit-scrollbar-thumb { background: var(--shadow-dark); border-radius: 4px; }
-.images-carousel a, .images-carousel .img-frame {
+.images-carousel .img-frame {
   flex: 0 0 auto; scroll-snap-align: start;
   width: 130px; height: 100px; border-radius: var(--radius-sm);
   box-shadow: var(--shadow-out-sm); overflow: hidden; display: block;
+  border: none; padding: 0; background: var(--bg); cursor: pointer;
 }
-.images-carousel img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.images-carousel .img-frame:active { box-shadow: var(--shadow-in-sm); }
+.images-carousel img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
 .images-carousel .img-credit-frame {
   flex: 0 0 auto; width: 130px; height: 100px; display: flex; align-items: center; justify-content: center;
   font-family: var(--mono); font-size: 0.62rem; color: var(--text-muted); text-align: center; padding: 8px;
@@ -457,6 +463,30 @@ button, input, select, textarea { font-family: inherit; color: inherit; }
 .insight-sheet-footer { padding: 12px 24px 20px; }
 
 [hidden] { display: none !important; }
+
+/* ---------- Image lightbox ---------- */
+.image-lightbox {
+  position: fixed; inset: 0; background: rgba(15,17,21,0.75); z-index: 90;
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.image-lightbox-inner {
+  background: var(--bg); border-radius: var(--radius); box-shadow: var(--shadow-out);
+  padding: 20px; max-width: 640px; width: 100%; max-height: 90vh; overflow-y: auto;
+  position: relative; text-align: center;
+}
+.image-lightbox-close { position: absolute; top: 14px; right: 14px; }
+.image-lightbox-inner img {
+  width: 100%; max-height: 55vh; object-fit: contain; border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-in-sm); margin: 10px 0 14px; background: var(--bg);
+}
+.image-lightbox-caption { text-align: left; font-size: 0.87rem; line-height: 1.55; margin-bottom: 16px; }
+.image-lightbox-caption p { margin: 0 0 8px; color: var(--text); }
+.image-lightbox-caption .source-note { color: var(--text-muted); font-family: var(--display); font-size: 0.85rem; font-style: italic; }
+
+@media (max-width: 640px) {
+  .image-lightbox { padding: 12px; }
+  .image-lightbox-inner { padding: 18px 16px; }
+}
 
 /* =========================================================
    Responsive: tablet + desktop scaling, mobile full-bleed UI
@@ -751,6 +781,16 @@ button, input, select, textarea { font-family: inherit; color: inherit; }
   </div>
   <div class="insight-sheet-footer">
     <a id="insightOpenPaper" href="#" target="_blank" rel="noopener" class="btn-primary">Open paper ↗</a>
+  </div>
+</div>
+
+<!-- Image lightbox -->
+<div class="image-lightbox" id="imageLightbox" hidden>
+  <div class="image-lightbox-inner">
+    <button id="closeLightbox" class="icon-btn image-lightbox-close" aria-label="Close">✕</button>
+    <img id="lightboxImg" src="" alt="">
+    <div class="image-lightbox-caption" id="lightboxCaption"></div>
+    <a id="lightboxSource" href="#" target="_blank" rel="noopener" class="btn-primary">Open source ↗</a>
   </div>
 </div>
 
@@ -1559,8 +1599,10 @@ async function fetchOpenverseImages(topic) {
       .slice(0, 10)
       .map((r) => ({
         thumb: r.thumbnail || r.url,
+        full: r.url || r.thumbnail,
         page: r.foreign_landing_url || r.url,
         credit: r.creator || r.source || "",
+        title: r.title || "",
       }));
   } catch (err) {
     return [];
@@ -1640,24 +1682,82 @@ function renderSummary(aiText, wiki, topic) {
   primerBody.innerHTML = `<p>${escapeHtml(wiki.extract)}</p><p class="source-note">Wikipedia extract — add an AI connection in Settings for a generated version instead.</p>`;
 }
 
-function renderImages(wikiThumb, openverseImages, topic) {
-  const all = [];
-  if (wikiThumb) all.push({ thumb: wikiThumb, page: null, credit: "Wikipedia" });
-  openverseImages.forEach((img) => all.push(img));
+let currentImages = [];
 
-  if (all.length === 0) {
+function renderImages(wikiThumb, openverseImages, topic) {
+  currentImages = [];
+  if (wikiThumb) currentImages.push({ thumb: wikiThumb, full: wikiThumb, page: null, credit: "Wikipedia", title: topic });
+  openverseImages.forEach((img) => currentImages.push(img));
+
+  if (currentImages.length === 0) {
     imagesBody.innerHTML = `<p class="error-text">No images found for "${escapeHtml(topic)}".</p>`;
     return;
   }
-  imagesBody.innerHTML = all
-    .map((img) => {
-      const tag = `<img src="${img.thumb}" alt="${escapeHtml(topic)}" loading="lazy">`;
-      return img.page
-        ? `<a class="img-frame" href="${img.page}" target="_blank" rel="noopener">${tag}</a>`
-        : `<span class="img-frame">${tag}</span>`;
+  imagesBody.innerHTML = currentImages
+    .map((img, idx) => {
+      const tag = `<img src="${img.thumb}" alt="${escapeHtml(img.title || topic)}" loading="lazy">`;
+      return `<button type="button" class="img-frame" data-idx="${idx}">${tag}</button>`;
     })
-    .join("") + `<span class="img-credit-frame">Wikipedia &amp; Openverse<br>(CC-licensed) · scroll for more →</span>`;
+    .join("") + `<span class="img-credit-frame">Wikipedia &amp; Openverse<br>(CC-licensed) · tap an image →</span>`;
 }
+
+imagesBody.addEventListener("click", (e) => {
+  const btn = e.target.closest(".img-frame");
+  if (!btn) return;
+  openImageLightbox(Number(btn.dataset.idx));
+});
+
+// ---------- Image lightbox ----------
+const imageLightbox = document.getElementById("imageLightbox");
+const lightboxImg = document.getElementById("lightboxImg");
+const lightboxCaption = document.getElementById("lightboxCaption");
+const lightboxSource = document.getElementById("lightboxSource");
+const closeLightbox = document.getElementById("closeLightbox");
+
+const IMAGE_CAPTION_PROMPT = (img, topic) =>
+  `${buildStyleInstruction()}\n\nAn image titled "${img.title || "untitled"}" (credit/source: "${img.credit || "unknown"}") appears in a search for the topic "${topic}". Without being able to see the actual pixels, write one short sentence (max 25 words) on what this image most likely shows and why it might be relevant to "${topic}", based only on its title and source. If the title gives you nothing to go on, just say it's a visual related to the topic via its source metadata — don't invent specifics you can't support.`;
+
+async function openImageLightbox(idx) {
+  const img = currentImages[idx];
+  if (!img) return;
+
+  lightboxImg.src = img.full || img.thumb;
+  lightboxImg.alt = img.title || currentTopic;
+  lightboxSource.href = img.page || "#";
+  lightboxSource.hidden = !img.page;
+
+  const metaParts = [img.title, img.credit].filter(Boolean);
+  lightboxCaption.innerHTML = metaParts.length
+    ? `<p>${escapeHtml(metaParts.join(" — "))}</p>`
+    : `<p class="loading">No metadata available for this image.</p>`;
+
+  imageLightbox.hidden = false;
+
+  if (window.NodewayAI && (img.title || img.credit)) {
+    const loadingLine = document.createElement("p");
+    loadingLine.className = "loading";
+    loadingLine.textContent = "Adding context…";
+    lightboxCaption.appendChild(loadingLine);
+    try {
+      const text = await window.NodewayAI.callActive(IMAGE_CAPTION_PROMPT(img, currentTopic));
+      if (imageLightbox.hidden) return; // closed while waiting
+      loadingLine.remove();
+      if (text) {
+        const aiLine = document.createElement("p");
+        aiLine.className = "source-note";
+        aiLine.textContent = text.trim();
+        lightboxCaption.appendChild(aiLine);
+      }
+    } catch (err) {
+      loadingLine.remove();
+    }
+  }
+}
+
+closeLightbox.addEventListener("click", () => (imageLightbox.hidden = true));
+imageLightbox.addEventListener("click", (e) => {
+  if (e.target === imageLightbox) imageLightbox.hidden = true;
+});
 
 function renderPapers(papers) {
   currentPapers = papers;

@@ -18,7 +18,12 @@ actual visual map of what you know.
   paper insight from "simple language + examples" up to "dense technical
   vocabulary, no hand-holding."
 - **Visuals** — a horizontally scrollable strip of images (Wikipedia +
-  Openverse, up to ~10), not just three static thumbnails.
+  Openverse, up to ~10) that stays within a fixed column width no matter how
+  many images load — it scrolls sideways, it never stretches the card or the
+  page. Tap any image for a lightbox: larger view, its title/credit, an
+  AI-generated context line (when you have a connection set — clearly framed
+  as inference from the title/metadata, not actual image recognition), and
+  an "Open source" button.
 - **Primary Sources** — CrossRef + Semantic Scholar, merged, deduped, sorted
   by citation count, scrollable. Click a paper for an AI-generated bottom
   sheet (what it's about, key findings, anything surprising); click again to

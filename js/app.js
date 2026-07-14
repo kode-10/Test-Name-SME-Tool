@@ -244,8 +244,10 @@ async function fetchOpenverseImages(topic) {
       .slice(0, 10)
       .map((r) => ({
         thumb: r.thumbnail || r.url,
+        full: r.url || r.thumbnail,
         page: r.foreign_landing_url || r.url,
         credit: r.creator || r.source || "",
+        title: r.title || "",
       }));
   } catch (err) {
     return [];
@@ -325,24 +327,82 @@ function renderSummary(aiText, wiki, topic) {
   primerBody.innerHTML = `<p>${escapeHtml(wiki.extract)}</p><p class="source-note">Wikipedia extract — add an AI connection in Settings for a generated version instead.</p>`;
 }
 
-function renderImages(wikiThumb, openverseImages, topic) {
-  const all = [];
-  if (wikiThumb) all.push({ thumb: wikiThumb, page: null, credit: "Wikipedia" });
-  openverseImages.forEach((img) => all.push(img));
+let currentImages = [];
 
-  if (all.length === 0) {
+function renderImages(wikiThumb, openverseImages, topic) {
+  currentImages = [];
+  if (wikiThumb) currentImages.push({ thumb: wikiThumb, full: wikiThumb, page: null, credit: "Wikipedia", title: topic });
+  openverseImages.forEach((img) => currentImages.push(img));
+
+  if (currentImages.length === 0) {
     imagesBody.innerHTML = `<p class="error-text">No images found for "${escapeHtml(topic)}".</p>`;
     return;
   }
-  imagesBody.innerHTML = all
-    .map((img) => {
-      const tag = `<img src="${img.thumb}" alt="${escapeHtml(topic)}" loading="lazy">`;
-      return img.page
-        ? `<a class="img-frame" href="${img.page}" target="_blank" rel="noopener">${tag}</a>`
-        : `<span class="img-frame">${tag}</span>`;
+  imagesBody.innerHTML = currentImages
+    .map((img, idx) => {
+      const tag = `<img src="${img.thumb}" alt="${escapeHtml(img.title || topic)}" loading="lazy">`;
+      return `<button type="button" class="img-frame" data-idx="${idx}">${tag}</button>`;
     })
-    .join("") + `<span class="img-credit-frame">Wikipedia &amp; Openverse<br>(CC-licensed) · scroll for more →</span>`;
+    .join("") + `<span class="img-credit-frame">Wikipedia &amp; Openverse<br>(CC-licensed) · tap an image →</span>`;
 }
+
+imagesBody.addEventListener("click", (e) => {
+  const btn = e.target.closest(".img-frame");
+  if (!btn) return;
+  openImageLightbox(Number(btn.dataset.idx));
+});
+
+// ---------- Image lightbox ----------
+const imageLightbox = document.getElementById("imageLightbox");
+const lightboxImg = document.getElementById("lightboxImg");
+const lightboxCaption = document.getElementById("lightboxCaption");
+const lightboxSource = document.getElementById("lightboxSource");
+const closeLightbox = document.getElementById("closeLightbox");
+
+const IMAGE_CAPTION_PROMPT = (img, topic) =>
+  `${buildStyleInstruction()}\n\nAn image titled "${img.title || "untitled"}" (credit/source: "${img.credit || "unknown"}") appears in a search for the topic "${topic}". Without being able to see the actual pixels, write one short sentence (max 25 words) on what this image most likely shows and why it might be relevant to "${topic}", based only on its title and source. If the title gives you nothing to go on, just say it's a visual related to the topic via its source metadata — don't invent specifics you can't support.`;
+
+async function openImageLightbox(idx) {
+  const img = currentImages[idx];
+  if (!img) return;
+
+  lightboxImg.src = img.full || img.thumb;
+  lightboxImg.alt = img.title || currentTopic;
+  lightboxSource.href = img.page || "#";
+  lightboxSource.hidden = !img.page;
+
+  const metaParts = [img.title, img.credit].filter(Boolean);
+  lightboxCaption.innerHTML = metaParts.length
+    ? `<p>${escapeHtml(metaParts.join(" — "))}</p>`
+    : `<p class="loading">No metadata available for this image.</p>`;
+
+  imageLightbox.hidden = false;
+
+  if (window.NodewayAI && (img.title || img.credit)) {
+    const loadingLine = document.createElement("p");
+    loadingLine.className = "loading";
+    loadingLine.textContent = "Adding context…";
+    lightboxCaption.appendChild(loadingLine);
+    try {
+      const text = await window.NodewayAI.callActive(IMAGE_CAPTION_PROMPT(img, currentTopic));
+      if (imageLightbox.hidden) return; // closed while waiting
+      loadingLine.remove();
+      if (text) {
+        const aiLine = document.createElement("p");
+        aiLine.className = "source-note";
+        aiLine.textContent = text.trim();
+        lightboxCaption.appendChild(aiLine);
+      }
+    } catch (err) {
+      loadingLine.remove();
+    }
+  }
+}
+
+closeLightbox.addEventListener("click", () => (imageLightbox.hidden = true));
+imageLightbox.addEventListener("click", (e) => {
+  if (e.target === imageLightbox) imageLightbox.hidden = true;
+});
 
 function renderPapers(papers) {
   currentPapers = papers;
